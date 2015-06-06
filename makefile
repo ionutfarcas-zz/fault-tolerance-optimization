@@ -6,7 +6,7 @@ LIBOPT = libopt.a
 AR = ar
 ARFLAGS = rv
 
-SRCS = main.cpp lp_opt.cpp helper.cpp
+SRCS = main.cpp helper.cpp
 OBJS =  $(addsuffix .o, $(basename $(SRCS)))
 
 all: opt_fault_tol

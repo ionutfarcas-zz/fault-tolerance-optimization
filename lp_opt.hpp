@@ -4,23 +4,18 @@
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+#include <vector>
+#include <map>
 #include <cassert>
 
-#include "helper.hpp"
 #include "glpk.h"
+#include "helper.hpp"
 
 namespace lp_opt
 {
 	class LP_OPT
 	{
-	private:
-		/* problem name */
-		const std::string prob_name = "error_splitting_optimization";
-
-		/* length of the c vector */
-		int i_n;
-		/* length of the d vector */
-		int i_m;
+	protected:
 		/* optimization type: GLP_MIN or GLP_MAX */
 		int opt_type;
 
@@ -34,44 +29,27 @@ namespace lp_opt
 		/* colums index vector for the constraint matrix */
 		int* col_index;
 
-		/* helper variables, used to compute the dimension of the constraint matrix */
-		int rows;
-		int cols;
-		int total_size;
-
 	public:
-		/* default constructor */
-		LP_OPT();
-		/* additional constructor */
-		/* used to initialize the problem parameters n and m, as well as the optimization type (MIN or MAX) */
-		/* moreover, size of the constraint matrix is computed and the its memory allocation is performed */
-		LP_OPT(const int& _i_n, const int& _i_m, const int& _opt_type);
-
 		/* used for LP optimization problem initialization */
 		/* number of auxiliary and structural variables is set */
 		/* as well as objective function and the constraints */
-		void init_opti_prob();
+		virtual void init_opti_prob(const std::string& prob_name) = 0;
 
-		/* used to set up the constraint matrix and its row and column indices */
-		/*  the constraint matrix has the form */
-		/* ----------- */
-		/* |  W | -I | */
- 		/* ----------- */
- 		/* | -W | -I | */
-		/* ----------- */
-		/* | 0m | 1n | */
-		/* ----------- */ 
-		void set_constr_matrix();
+		/* used to set up the constraint matrix and its row and column indices */ 
+		virtual void set_constr_matrix() = 0;
+
+		/* used to set up the constraint matrix and its row and column indices when it depends on matrix W*/ 
+		virtual void set_constr_matrix(const std::vector<double>& W) = 0;
 
 		/* used to solve the linear programming problem, using the simplex algorithm */
-		void solve_opti_problem() const;
+		virtual void solve_opti_problem() const = 0;
 
 		/* used to get the output of the LP problem, i.e. c and d vectors */
-		std::vector<double> get_results() const;
+		virtual std::vector<double> get_results() const = 0;
 
 		/* destructor; used to deallocate all the allocated memory */
-		~LP_OPT();
-
+		virtual ~LP_OPT() {}
 	};
 }
-#endif /* LP_HPP_ */
+
+#endif /* LPOPT_HPP_ */
