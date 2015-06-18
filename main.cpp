@@ -4,8 +4,8 @@ int main(int argv, char** argc)
 {
 	int level_min_x = 1;
 	int level_min_y = 1;
-	int level_max_x = 5;
-	int level_max_y = 5;
+	int level_max_x = 4;
+	int level_max_y = 4;
 
 	const std::string prob_name = "interp_optimization";
 

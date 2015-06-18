@@ -30,7 +30,7 @@ namespace lp_opt
 		/* M matrix s.t. w = Mc */
 		double** M;
 		/* inverse of M */
-		double** M_inv;
+		double** inv_M;
 
 		/* entire donwset with corresponding indices */
 		combi_grid_dict entire_downset;
@@ -78,18 +78,6 @@ namespace lp_opt
 				size_downset, 
 				python_caller);
 
-			M = (double**)calloc(size_downset, sizeof(double*));
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				M[i] = (double*)calloc(size_downset, sizeof(double));
-			}
-
-			M_inv = (double**)calloc(size_downset, sizeof(double*));
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				M_inv[i] = (double*)calloc(size_downset, sizeof(double));
-			}
-
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
 			row_index = (int*)malloc((1 + total_size)*sizeof(int));
 			col_index = (int*)malloc((1 + total_size)*sizeof(int));
@@ -107,20 +95,40 @@ namespace lp_opt
 			glp_set_prob_name(i_lp_prob, prob_name.c_str());
 			glp_set_obj_dir(i_lp_prob, opt_type);
 
-			std::cout << "Levels(x, y) and coefficients corresponding to the entire downset " << std::endl;
-			for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
-			{
-				std::cout << ii->first[0] << " " << ii->first[1] << " " << ii->second << std::endl;
-			}
-
 			combi_grid_dict aux = aux_dict(entire_downset);
-			
-			set_M_matrix(M, aux);
-			std::cout << "M matrix: " << std::endl;
+
+			M = M_matrix(aux);
+			std::cout << "M matrix " << std::endl;
 			for(int i = 0 ; i < size_downset ; ++i)
 			{
 				for(int j = 0 ; j < size_downset ; ++j)
 					std::cout << M[i][j] << " ";
+
+				std::cout << std::endl;
+			}
+			
+			inv_M = M_inv(aux);
+			std::cout << "inverse of M " << std::endl;
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				for(int j = 0 ; j < size_downset ; ++j)
+					std::cout << inv_M[i][j] << " ";
+
+				std::cout << std::endl;
+			}
+
+			double** result = (double**)calloc(size_downset, sizeof(double*));
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				result[i] = (double*)calloc(size_downset, sizeof(double));
+			}
+
+			result = mat_prod(M, inv_M, size_downset);
+			std::cout << "M*inv(M) " << std::endl;
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				for(int j = 0 ; j < size_downset ; ++j)
+					std::cout << result[i][j] << " ";
 
 				std::cout << std::endl;
 			}
@@ -151,17 +159,6 @@ namespace lp_opt
 
 		virtual ~LP_OPT_INTERP()
 		{
-			for(int i = 0 ; i < size_downset; ++i)
-    		{
-    			free(M[i]);
-    		}
-    		free(M);
-    		for(int i = 0 ; i < size_downset; ++i)
-    		{
-    			free(M_inv[i]);
-    		}
-    		free(M_inv);
-
 			free(constr_mat);
 			free(row_index);
 			free(col_index);
