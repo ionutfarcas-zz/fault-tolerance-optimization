@@ -120,7 +120,7 @@ double** M_matrix(const combi_grid_dict& aux_downset)
     return M;
 }
 
-double** set_N_matrix(const combi_grid_dict& aux_downset)
+double** N_matrix(const combi_grid_dict& aux_downset)
 {
     int size_downset = aux_downset.size();
     int i = 0;
@@ -263,7 +263,7 @@ double** M_inv(const combi_grid_dict& aux_downset)
     assert(sum_N!= NULL);
     assert(M_inv!= NULL);
 
-    N = set_N_matrix(aux_downset);
+    N = N_matrix(aux_downset);
     sum_N = sum_pow_N(N, size_downset);
 
     for(int i = 0 ; i < size_downset ; ++i)
@@ -284,7 +284,7 @@ double** M_inv(const combi_grid_dict& aux_downset)
     return M_inv;
 }
 
-combi_grid_dict entire_downset_dict(
+combi_grid_dict set_entire_downset_dict(
     const int& level_max_x,
     const int& level_max_y,  
     const int& size_downset, 
@@ -321,7 +321,6 @@ combi_grid_dict entire_downset_dict(
                     output.insert(std::make_pair(levels, key));
                 }
             }
-
         }
         result = output;
     }
@@ -333,13 +332,13 @@ combi_grid_dict entire_downset_dict(
     return result;
 }
 
-combi_grid_dict aux_dict(const combi_grid_dict& entire_downset)
+combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset)
 {
     double key = 0;
     int i = 0;
     std::vector<int> levels;
 
-    combi_grid_dict aux_dict_out;
+    combi_grid_dict aux_dict;
 
     for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
     {
@@ -347,10 +346,24 @@ combi_grid_dict aux_dict(const combi_grid_dict& entire_downset)
         levels = {ii ->first[0], ii ->first[1]};
         ++i;
 
-        aux_dict_out.insert(std::make_pair(levels, key));
+        aux_dict.insert(std::make_pair(levels, key));
     }
 
-    return aux_dict_out;
+    return aux_dict;
+}
+
+vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
+{
+    vec2d indices;
+    std::vector<int> index;
+
+    for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
+    {
+        index = {ii ->first[0], ii ->first[1]};
+        indices.push_back(index);
+    }
+
+    return indices;
 }
 
 std::string set_aux_var_name(const std::string& var_name, const int& index)
@@ -380,6 +393,18 @@ int get_size_downset(const int& level_max_x, const int& level_max_y)
     assert(level_max_x == level_max_y);
 
     return static_cast<int>((level_max_x)*(level_max_x + 1)*0.5);
+}
+
+int l1_norm(const std::vector<int> u)
+{
+    int norm = 0;
+
+    for (int elem : u)
+    { 
+        norm += abs(elem); 
+    }
+
+    return norm;
 }
 
 bool test_greater(const std::vector<int>& j, const std::vector<int>& i)

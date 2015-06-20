@@ -35,8 +35,8 @@ namespace lp_opt
 		/* as well as objective function and the constraints */
 		virtual void init_opti_prob(const std::string& prob_name) = 0;
 
-		/* used to set up the constraint matrix and its row and column indices */ 
-		virtual void set_constr_matrix() = 0;
+		/* used to set up the constraint matrix and its row and column indices when it depends on faults*/ 
+		virtual void set_constr_matrix(const vec2d& faults) = 0;
 
 		/* used to set up the constraint matrix and its row and column indices when it depends on matrix W*/ 
 		virtual void set_constr_matrix(const std::vector<double>& W) = 0;

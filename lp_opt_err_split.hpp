@@ -10,7 +10,6 @@ namespace lp_opt
 	private:
 		/* length of the c vector */
 		int i_n;
-
 		/* length of the d vector */
 		int i_m;
 		
@@ -86,7 +85,7 @@ namespace lp_opt
 			}
 		}
 
-		virtual void set_constr_matrix()
+		virtual void set_constr_matrix(const vec2d& faults)
 		{
 			/* do-nothing here */
 		}

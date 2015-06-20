@@ -11,7 +11,7 @@ namespace lp_opt
 		/* name of the python script */
 		const std::string script_name = "../python_code/main.py";
 		/* python caller */
-		std::string python_caller;
+		std::string get_dict;
 
 		/* maximum level x direction*/
 		int i_level_min_x;
@@ -22,18 +22,23 @@ namespace lp_opt
 		/* maximum level y direction*/
 		int i_level_max_y;
 
+		/* no. of constraints */
+		int i_no_faults;
+
 		/* total size of the optimization problem */
 		int total_size;
 		/* down set size */
 		int size_downset;
 
-		/* M matrix s.t. w = Mc */
-		double** M;
-		/* inverse of M */
+		/* inverse of M s.t. w = Mc*/
 		double** inv_M;
 
 		/* entire donwset with corresponding indices */
 		combi_grid_dict entire_downset;
+		/* auxiliary dictionary, used to create M and inv(M) */
+		combi_grid_dict aux_entire_dict;
+		/* downset indices as a 2d vector*/
+		vec2d downset_indices;
 
 	public:
 		LP_OPT_INTERP() {}
@@ -42,13 +47,15 @@ namespace lp_opt
 			const int& _i_level_min_x,
 			const int& _i_level_min_y,  
 			const int& _i_level_max_x,
-			const int& _i_level_max_y, 
+			const int& _i_level_max_y,
+			const int& _i_no_faults, 
 			const int& _opt_type)
 		{
 			assert(_i_level_min_x >= 1);
 			assert(_i_level_min_y >= 1);
 			assert(_i_level_max_x >= 1);
 			assert(_i_level_max_y >= 1);
+			assert(_i_no_faults >= 0);
 
 			assert(_i_level_max_x >= _i_level_min_x);
 			assert(_i_level_max_y >= _i_level_min_y);
@@ -60,23 +67,29 @@ namespace lp_opt
 			i_level_max_x = _i_level_max_x;
 			i_level_max_y = _i_level_max_y;
 
+			i_no_faults = _i_no_faults;
 			opt_type = _opt_type;
 
 			size_downset = get_size_downset(_i_level_max_x, _i_level_max_y);
-			total_size = size_downset*size_downset;
+			total_size = _i_no_faults*size_downset;
 
-			python_caller = python_code_caller(
+			get_dict = python_code_caller(
 				script_name, 
 				i_level_min_x, 
 				i_level_min_y,  
 				i_level_max_x, 
 				i_level_max_y);
 
-			entire_downset = entire_downset_dict(
+			entire_downset = set_entire_downset_dict(
 				i_level_max_x,
 				i_level_max_y,  
 				size_downset, 
-				python_caller);
+				get_dict);
+
+			aux_entire_dict = create_aux_entire_dict(entire_downset);
+			inv_M = M_inv(aux_entire_dict);
+
+			downset_indices = get_donwset_indices(entire_downset);
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
 			row_index = (int*)malloc((1 + total_size)*sizeof(int));
@@ -89,54 +102,62 @@ namespace lp_opt
 
 		virtual void init_opti_prob(const std::string& prob_name)
 		{
+			std::vector<int> index;
+			std::string aux_var;
+			double neg_norm = 0.0;
+			double coeff = 0.0;
+
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
 
 			glp_set_prob_name(i_lp_prob, prob_name.c_str());
 			glp_set_obj_dir(i_lp_prob, opt_type);
 
-			combi_grid_dict aux = aux_dict(entire_downset);
+			glp_add_rows(i_lp_prob, i_no_faults);
+			glp_add_cols(i_lp_prob, size_downset);
 
-			M = M_matrix(aux);
-			std::cout << "M matrix " << std::endl;
-			for(int i = 0 ; i < size_downset ; ++i)
+			for(int i = 0 ; i < i_no_faults; ++i)
 			{
-				for(int j = 0 ; j < size_downset ; ++j)
-					std::cout << M[i][j] << " ";
-
-				std::cout << std::endl;
-			}
-			
-			inv_M = M_inv(aux);
-			std::cout << "inverse of M " << std::endl;
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				for(int j = 0 ; j < size_downset ; ++j)
-					std::cout << inv_M[i][j] << " ";
-
-				std::cout << std::endl;
+				aux_var = set_aux_var_name("eq_constr_", i + 1);
+				glp_set_row_name(i_lp_prob, i + 1, aux_var.c_str());
+				glp_set_row_bnds(i_lp_prob, i + 1, GLP_FX, 0.0, 0.0);
 			}
 
-			double** result = (double**)calloc(size_downset, sizeof(double*));
 			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				result[i] = (double*)calloc(size_downset, sizeof(double));
-			}
+   			{
+   				index = {downset_indices[i][0], downset_indices[i][1]};
+   				neg_norm = -l1_norm(index);
+   				coeff = pow(4.0, neg_norm);
 
-			result = mat_prod(M, inv_M, size_downset);
-			std::cout << "M*inv(M) " << std::endl;
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				for(int j = 0 ; j < size_downset ; ++j)
-					std::cout << result[i][j] << " ";
-
-				std::cout << std::endl;
+				aux_var = set_aux_var_name("w", i + 1);
+				glp_set_col_name(i_lp_prob, i + 1, aux_var.c_str());
+				glp_set_col_bnds(i_lp_prob, i + 1, GLP_FR, 0.0, 0.0);
+				glp_set_obj_coef(i_lp_prob, i + 1, coeff);
 			}
 		}
 
-		virtual void set_constr_matrix()
+		virtual void set_constr_matrix(const vec2d& faults)
 		{
-			/* TO -DO : inverse of the M matrix, obtained from the mapping of levels and coefficients */
+			int inv_M_row_index = 0;
+			std::vector<int> fault;
+
+			std::cout << "Constraint matrix" << std::endl;
+			for(int i = 0 ; i < i_no_faults ; ++i)
+			{
+				fault = {faults[i][0], faults[i][1]};
+				auto it = aux_entire_dict.find(fault);
+
+				if(it != aux_entire_dict.end())
+				{
+					inv_M_row_index = static_cast<int>(it->second);
+
+					for(int j = 0 ; j < size_downset ; ++j)
+					{
+						std::cout << inv_M[inv_M_row_index][j] << " ";	
+					}
+					std::cout << std::endl;
+				}
+			}
 		}
 
 		virtual void set_constr_matrix(const std::vector<double>& W)
@@ -151,6 +172,18 @@ namespace lp_opt
 
 		virtual std::vector<double> get_results() const
 		{
+			// combi_grid_dict aux_dict = create_aux_entire_dict(entire_downset);
+			// inv_M = M_inv(aux_dict);
+
+			// std::cout << "inverse of M " << std::endl;
+			// for(int i = 0 ; i < size_downset ; ++i)
+			// {
+			// 	for(int j = 0 ; j < size_downset ; ++j)
+			// 		std::cout << inv_M[i][j] << " ";
+
+			// 	std::cout << std::endl;
+			// }
+
 			/* TO -DO : save the new coefficiants after the lp optimization problem is solved */
 			std::vector<double> v;	
 

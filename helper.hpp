@@ -12,6 +12,7 @@
 #include <cassert>
 
 typedef std::multimap<std::vector<int>, double> combi_grid_dict;
+typedef std::vector<std::vector<int>> vec2d;
 
 /* used to convert a string to a number in any format */
 template<typename T>
@@ -28,7 +29,7 @@ combi_grid_dict get_python_data(const std::string& script_run);
 /* used to create the M matrix for the interpolation based problem */
 double** M_matrix(const combi_grid_dict& aux_downset);
 /* used to set the N matrix = M - the identity */
-double** set_N_matrix(const combi_grid_dict& aux_downset);
+double** N_matrix(const combi_grid_dict& aux_downset);
 /* product of two matrices */
 double** mat_prod(double** A, double** B, const int& dim);
 /* used to compute powers of the matrix N; helpful when computing its inverse */
@@ -38,19 +39,23 @@ double** sum_pow_N(double** N, const int& size_downset);
 /* used to create the inverse of M matrix for the interpolation based problem */
 double** M_inv(const combi_grid_dict& aux_downset);
 /* used to create the inverse of M matrix for the interpolation based problem */
-combi_grid_dict entire_downset_dict(
+combi_grid_dict set_entire_downset_dict(
     const int& level_max_x,
     const int& level_max_y,  
     const int& size_downset, 
     const std::string& script_run);
-/* used for setting up the M matrix */
-combi_grid_dict aux_dict(const combi_grid_dict& entire_downset);
+/* used to get a vector of the entire downset indices */
+vec2d get_donwset_indices(const combi_grid_dict& entire_downset);
+/* used to create an entire downset dictionary used for setting up the M matrix */
+combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset);
 /* used to set the row and column variables for the optimization problem */
 std::string set_aux_var_name(const std::string& var_name, const int& index);
 /* used to generate random variables for the W matrix in the optimization problem */
 std::vector<double> gen_rand(const int& size); 
 /* used to compute the size of the down set for the case level_max_x = level_max_y */
 int get_size_downset(const int& level_max_x, const int& level_max_y);
+/* used to compute the L1 norm of a vector */
+int l1_norm(const std::vector<int> u);
 /* test whether j >= i */
 bool test_greater(const std::vector<int>& j, const std::vector<int>& i);
 
