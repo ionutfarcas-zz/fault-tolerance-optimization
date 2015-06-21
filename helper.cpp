@@ -366,6 +366,26 @@ vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
     return indices;
 }
 
+combi_grid_dict create_out_dict(const combi_grid_dict& entire_downset, const std::vector<double>& new_c)
+{
+    double key = 0;
+    int i = 0;
+    std::vector<int> levels;
+
+    combi_grid_dict out_dict;
+
+    for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
+    {
+        key = new_c[i];
+        levels = {ii ->first[0], ii ->first[1]};
+        ++i;
+
+        out_dict.insert(std::make_pair(levels, key));
+    }
+
+    return out_dict;
+}
+
 std::string set_aux_var_name(const std::string& var_name, const int& index)
 {
 	std::stringstream aux_var;

@@ -48,6 +48,8 @@ combi_grid_dict set_entire_downset_dict(
 vec2d get_donwset_indices(const combi_grid_dict& entire_downset);
 /* used to create an entire downset dictionary used for setting up the M matrix */
 combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset);
+/* used to print the new dictionary after the optimization is performed */
+combi_grid_dict create_out_dict(const combi_grid_dict& entire_downset, const std::vector<double>& new_c);
 /* used to set the row and column variables for the optimization problem */
 std::string set_aux_var_name(const std::string& var_name, const int& index);
 /* used to generate random variables for the W matrix in the optimization problem */

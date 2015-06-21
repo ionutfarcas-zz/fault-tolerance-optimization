@@ -124,14 +124,14 @@ namespace lp_opt
 			}
 
 			for(int i = 0 ; i < size_downset ; ++i)
-   			{
-   				index = {downset_indices[i][0], downset_indices[i][1]};
-   				neg_norm = -l1_norm(index);
-   				coeff = pow(4.0, neg_norm);
+			{
+				index = {downset_indices[i][0], downset_indices[i][1]};
+				neg_norm = -l1_norm(index);
+				coeff = pow(4.0, neg_norm);
 
 				aux_var = set_aux_var_name("w", i + 1);
 				glp_set_col_name(i_lp_prob, i + 1, aux_var.c_str());
-				glp_set_col_bnds(i_lp_prob, i + 1, GLP_FR, 0.0, 0.0);
+				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, -1.0, 1.0);
 				glp_set_obj_coef(i_lp_prob, i + 1, coeff);
 			}
 		}
@@ -141,7 +141,6 @@ namespace lp_opt
 			int inv_M_row_index = 0;
 			std::vector<int> fault;
 
-			std::cout << "Constraint matrix" << std::endl;
 			for(int i = 0 ; i < i_no_faults ; ++i)
 			{
 				fault = {faults[i][0], faults[i][1]};
@@ -153,41 +152,77 @@ namespace lp_opt
 
 					for(int j = 0 ; j < size_downset ; ++j)
 					{
-						std::cout << inv_M[inv_M_row_index][j] << " ";	
+						constr_mat[j + i*size_downset + 1] = inv_M[inv_M_row_index][j];
 					}
-					std::cout << std::endl;
+				}
+			}
+
+			for(int i = 0 ; i < i_no_faults ; ++i)
+			{
+				for(int j = 0 ; j < size_downset ; ++j)
+				{
+					row_index[j + i*size_downset + 1] = i + 1;
+					col_index[j + i*size_downset + 1] = j + 1;
 				}
 			}
 		}
 
 		virtual void set_constr_matrix(const std::vector<double>& W)
 		{	
-			/* nothing to do here */
+			/* TO DO: nothing here */
 		}
 
 		virtual void solve_opti_problem() const
 		{
-			/* TO - DO :call one lp optimization routine after setting up the constraints matrix and coeficient vectors */
+			glp_load_matrix(i_lp_prob, total_size, row_index, col_index, constr_mat);
+			glp_simplex(i_lp_prob, NULL);	
 		}
 
 		virtual std::vector<double> get_results() const
 		{
-			// combi_grid_dict aux_dict = create_aux_entire_dict(entire_downset);
-			// inv_M = M_inv(aux_dict);
+			double w_i = 0.0;
+			double c_i = 0.0;
+			std::vector<double> w;		
+			std::vector<double> c;
 
-			// std::cout << "inverse of M " << std::endl;
-			// for(int i = 0 ; i < size_downset ; ++i)
-			// {
-			// 	for(int j = 0 ; j < size_downset ; ++j)
-			// 		std::cout << inv_M[i][j] << " ";
+			combi_grid_dict input, output;
 
-			// 	std::cout << std::endl;
-			// }
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				w_i = glp_get_col_prim(i_lp_prob, i + 1);
+				w.push_back(w_i);
+			}
 
-			/* TO -DO : save the new coefficiants after the lp optimization problem is solved */
-			std::vector<double> v;	
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				c_i = 0.0;
+				for(int j = 0 ; j < size_downset ; ++j)
+				{
+					c_i += inv_M[i][j]*w[j];
+				}
+				c.push_back(c_i);
+			}
 
-			return v;
+			input = get_python_data(get_dict);
+			output = create_out_dict(entire_downset, c);
+
+			std::cout << std::endl;
+			std::cout<< "Dictionary before optimization: " << std::endl;
+			for(auto it = input.begin(); it != input.end(); ++it)
+			{
+				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
+			}
+			std::cout << std::endl;
+
+			std::cout << std::endl;
+			std::cout<< "Dictionary after optimization: " << std::endl;
+			for(auto it = output.begin(); it != output.end(); ++it)
+			{
+				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
+			}
+			std::cout << std::endl;
+			
+			return c;
 		}
 
 		virtual ~LP_OPT_INTERP()

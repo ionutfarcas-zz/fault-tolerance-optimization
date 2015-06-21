@@ -87,7 +87,7 @@ namespace lp_opt
 
 		virtual void set_constr_matrix(const vec2d& faults)
 		{
-			/* do-nothing here */
+			/* TO DO: nothing here */
 		}
 
 		/* the constraint matrix has the form */
