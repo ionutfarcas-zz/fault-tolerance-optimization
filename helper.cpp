@@ -366,7 +366,38 @@ vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
     return indices;
 }
 
-combi_grid_dict create_out_dict(const combi_grid_dict& entire_downset, const std::vector<double>& new_c)
+vec2d filter_faults(const vec2d& faults_input, const std::string& script_run)
+{
+    int no_faults = 0;
+    double key = 0.0;
+    combi_grid_dict received_dict;
+    std::vector<int> fault;
+
+    vec2d faults_output;
+
+    no_faults = faults_input.size();
+    received_dict = get_python_data(script_run);
+    
+    for(int i = 0 ; i < no_faults ; ++i)
+    {
+        fault = {faults_input[i][0], faults_input[i][1]};
+        auto it = received_dict.find(fault);
+
+        if(it != received_dict.end())
+        {
+            key = it->second;
+
+            if(key != 0.0)
+            {
+                faults_output.push_back(fault);
+            }
+        }
+    }
+
+    return faults_output;
+}
+
+combi_grid_dict create_out_dict(const combi_grid_dict& given_downset, const std::vector<double>& new_c)
 {
     double key = 0;
     int i = 0;
@@ -374,7 +405,7 @@ combi_grid_dict create_out_dict(const combi_grid_dict& entire_downset, const std
 
     combi_grid_dict out_dict;
 
-    for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
+    for(auto ii = given_downset.begin(); ii != given_downset.end(); ++ii)
     {
         key = new_c[i];
         levels = {ii ->first[0], ii ->first[1]};
@@ -401,11 +432,11 @@ std::vector<double> gen_rand(const int& size)
 
 	for(int i = 0 ; i < size ; ++i)
 	{
-       rand_var = 1e-2*(std::rand()%10);
-       output.push_back(rand_var);
-   }
+     rand_var = 1e-2*(std::rand()%10);
+     output.push_back(rand_var);
+ }
 
-   return output;
+ return output;
 }
 
 int get_size_downset(const int& level_max_x, const int& level_max_y)

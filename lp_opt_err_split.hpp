@@ -85,7 +85,7 @@ namespace lp_opt
 			}
 		}
 
-		virtual void set_constr_matrix(const vec2d& faults)
+		virtual void set_constr_matrix()
 		{
 			/* TO DO: nothing here */
 		}

@@ -33,12 +33,18 @@ namespace lp_opt
 		/* inverse of M s.t. w = Mc*/
 		double** inv_M;
 
+		/* given downset from python code */
+		combi_grid_dict given_downset;
 		/* entire donwset with corresponding indices */
 		combi_grid_dict entire_downset;
 		/* auxiliary dictionary, used to create M and inv(M) */
 		combi_grid_dict aux_entire_dict;
 		/* downset indices as a 2d vector*/
 		vec2d downset_indices;
+		/* faults input by user */
+		vec2d input_faults;
+		/* faults that are in the given downset from the set of input faults */
+		vec2d valid_input_faults;
 
 	public:
 		LP_OPT_INTERP() {}
@@ -47,15 +53,14 @@ namespace lp_opt
 			const int& _i_level_min_x,
 			const int& _i_level_min_y,  
 			const int& _i_level_max_x,
-			const int& _i_level_max_y,
-			const int& _i_no_faults, 
-			const int& _opt_type)
+			const int& _i_level_max_y, 
+			const int& _opt_type,
+			const vec2d& _input_faults)
 		{
 			assert(_i_level_min_x >= 1);
 			assert(_i_level_min_y >= 1);
 			assert(_i_level_max_x >= 1);
 			assert(_i_level_max_y >= 1);
-			assert(_i_no_faults >= 0);
 
 			assert(_i_level_max_x >= _i_level_min_x);
 			assert(_i_level_max_y >= _i_level_min_y);
@@ -67,12 +72,12 @@ namespace lp_opt
 			i_level_max_x = _i_level_max_x;
 			i_level_max_y = _i_level_max_y;
 
-			i_no_faults = _i_no_faults;
 			opt_type = _opt_type;
 
-			size_downset = get_size_downset(_i_level_max_x, _i_level_max_y);
-			total_size = _i_no_faults*size_downset;
+			input_faults = _input_faults;
 
+			size_downset = get_size_downset(_i_level_max_x, _i_level_max_y);
+	
 			get_dict = python_code_caller(
 				script_name, 
 				i_level_min_x, 
@@ -80,6 +85,18 @@ namespace lp_opt
 				i_level_max_x, 
 				i_level_max_y);
 
+			valid_input_faults = filter_faults(input_faults, get_dict);
+			i_no_faults = valid_input_faults.size();
+
+			if(i_no_faults == 0)
+			{
+				std::cout << "Please introduce valid faults!" << std::endl;
+				exit(0);
+			}
+
+			total_size = i_no_faults*size_downset;
+
+			given_downset = get_python_data(get_dict);
 			entire_downset = set_entire_downset_dict(
 				i_level_max_x,
 				i_level_max_y,  
@@ -136,14 +153,14 @@ namespace lp_opt
 			}
 		}
 
-		virtual void set_constr_matrix(const vec2d& faults)
+		virtual void set_constr_matrix()
 		{
 			int inv_M_row_index = 0;
 			std::vector<int> fault;
 
 			for(int i = 0 ; i < i_no_faults ; ++i)
 			{
-				fault = {faults[i][0], faults[i][1]};
+				fault = {valid_input_faults[i][0], valid_input_faults[i][1]};
 				auto it = aux_entire_dict.find(fault);
 
 				if(it != aux_entire_dict.end())
@@ -204,7 +221,23 @@ namespace lp_opt
 			}
 
 			input = get_python_data(get_dict);
-			output = create_out_dict(entire_downset, c);
+			output = create_out_dict(given_downset, c);
+
+			std::cout << std::endl;
+			std::cout << "Input faults" << std::endl;
+			for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
+			{
+				std::cout << "{" << input_faults[i][0] << ", " << input_faults[i][1] << "} ";
+			}
+			std::cout << std::endl;
+
+			std::cout << std::endl;
+			std::cout << "Valid input faults" << std::endl;
+			for(int i = 0 ; i < i_no_faults ; ++i)
+			{
+				std::cout << "{" << valid_input_faults[i][0] << ", " << valid_input_faults[i][1] << "} ";
+			}
+			std::cout << std::endl;
 
 			std::cout << std::endl;
 			std::cout<< "Dictionary before optimization: " << std::endl;

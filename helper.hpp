@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <cassert>
 
 typedef std::multimap<std::vector<int>, double> combi_grid_dict;
@@ -46,10 +47,13 @@ combi_grid_dict set_entire_downset_dict(
     const std::string& script_run);
 /* used to get a vector of the entire downset indices */
 vec2d get_donwset_indices(const combi_grid_dict& entire_downset);
+/* used to filter the input vec2d faults such that only faults from the partial downset
+(input from python) are considered */
+vec2d filter_faults(const vec2d& faults_input, const std::string& script_run);
 /* used to create an entire downset dictionary used for setting up the M matrix */
 combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset);
 /* used to print the new dictionary after the optimization is performed */
-combi_grid_dict create_out_dict(const combi_grid_dict& entire_downset, const std::vector<double>& new_c);
+combi_grid_dict create_out_dict(const combi_grid_dict& given_downset, const std::vector<double>& new_c);
 /* used to set the row and column variables for the optimization problem */
 std::string set_aux_var_name(const std::string& var_name, const int& index);
 /* used to generate random variables for the W matrix in the optimization problem */
