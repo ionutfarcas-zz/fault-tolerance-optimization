@@ -17,14 +17,19 @@ T str_to_number(const std::string& no)
     return value;
 }
 
-std::string python_code_caller(
-    const std::string& script_name, 
-    const int& level_min_x,
-    const int& level_min_y, 
-    const int& level_max_x,
-    const int& level_max_y)
+std::string python_code_caller(const std::string& script_name, const std::vector<int>& level_1, const std::vector<int>& level_2)
 {
+    int level_min_x = 0;
+    int level_min_y = 0;
+    int level_max_x = 0;
+    int level_max_y = 0;
+
 	std::stringstream caller;
+
+    level_min_x = level_1[0];
+    level_min_y = level_1[1];
+    level_max_x = level_2[0];
+    level_max_y = level_2[1];
 
 	caller << "python " << script_name << " " << level_min_x << " " << level_min_y << " " << level_max_x << " " << level_max_y;
 
@@ -284,12 +289,10 @@ double** M_inv(const combi_grid_dict& aux_downset)
     return M_inv;
 }
 
-combi_grid_dict set_entire_downset_dict(
-    const int& level_max_x,
-    const int& level_max_y,  
-    const int& size_downset, 
-    const std::string& script_run)
+combi_grid_dict set_entire_downset_dict(const std::vector<int>& level_max, const int& size_downset, const std::string& script_run)
 {
+    int level_max_x = 0;
+    int level_max_y = 0;
     int in_dict_size = 0;
     int in_out_diff = 0;
     double key = 0.0;
@@ -298,6 +301,8 @@ combi_grid_dict set_entire_downset_dict(
 
     input = get_python_data(script_run);
     in_dict_size = input.size();
+    level_max_x = level_max[0];
+    level_max_y = level_max[1];
 
     in_out_diff = size_downset - in_dict_size;
 
@@ -366,10 +371,10 @@ vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
     return indices;
 }
 
-vec2d filter_faults(const vec2d& faults_input, const std::string& script_run)
+vec2d filter_faults(const vec2d& faults_input, const int& l_max, const std::string& script_run)
 {
     int no_faults = 0;
-    double key = 0.0;
+    int level_fault = 0;
     combi_grid_dict received_dict;
     std::vector<int> fault;
 
@@ -385,9 +390,9 @@ vec2d filter_faults(const vec2d& faults_input, const std::string& script_run)
 
         if(it != received_dict.end())
         {
-            key = it->second;
+            level_fault = faults_input[i][0] + faults_input[i][1];
 
-            if(key != 0.0)
+            if((level_fault == l_max) || (level_fault == (l_max - 1)))
             {
                 faults_output.push_back(fault);
             }
@@ -439,11 +444,15 @@ std::vector<double> gen_rand(const int& size)
  return output;
 }
 
-int get_size_downset(const int& level_max_x, const int& level_max_y)
+int get_size_downset(const std::vector<int>& level_max)
 {
-    assert(level_max_x == level_max_y);
+    int level_max_x = 0;
+    int level_max_y = 0;
 
-    return static_cast<int>((level_max_x)*(level_max_x + 1)*0.5);
+    level_max_x = level_max[0];
+    level_max_y = level_max[1];
+
+    return static_cast<int>((level_max_x)*(level_max_y + 1)*0.5);
 }
 
 int l1_norm(const std::vector<int> u)

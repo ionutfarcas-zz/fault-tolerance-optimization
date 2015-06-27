@@ -14,23 +14,21 @@ int main(int argv, char** argc)
 
 	/* specify level min and level max for which the python code will be called */
 	/* for the moment, only implemented for the same x and y levels! */
-	int level_min_x = 1;
-	int level_min_y = 1;
-	int level_max_x = 7;
-	int level_max_y = 7;
+	std::vector<int> level_1 = {1, 1};
+	std::vector<int> level_2 = {7, 7};
+	int dim = level_1.size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */
-	vec2d faults = {{1, 1}, {3, 4}};
+	vec2d faults = {{1, 1}, {2, 3}, {3, 4}};
 
 	/* output (i.e. c vector) of the optimization problem */
 	std::vector<double> new_c;
 
 	/* start the optimization problem */
 	lp_opt::LP_OPT_INTERP opt_interp(
-		level_min_x, 
-		level_min_y, 
-		level_max_x, 
-		level_max_y, 
+		level_1, 
+		level_2, 
+		dim,
 		GLP_MAX,
 		faults);
 	opt_interp.init_opti_prob(prob_name);
@@ -39,6 +37,7 @@ int main(int argv, char** argc)
 	new_c = opt_interp.get_results();
 	/* end the optimization problem */
 
+	std::cout << std::endl;
 	std::cout << "Optimization problem terminated succesfully!" << std::endl;
 	return 0;
 }

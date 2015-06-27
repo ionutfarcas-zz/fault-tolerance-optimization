@@ -13,17 +13,17 @@ namespace lp_opt
 		/* python caller */
 		std::string get_dict;
 
-		/* maximum level x direction*/
-		int i_level_min_x;
-		/* maximum level y direction*/
-		int i_level_min_y;
-		/* maximum level x direction*/
-		int i_level_max_x;
-		/* maximum level y direction*/
-		int i_level_max_y;
+		/* first level of grid indices */
+		std::vector<int> i_level_1;
+		/* second level of grid indices */
+		std::vector<int> i_level_2;
+		/* dimension of the problem */
+		int i_dim;
 
 		/* no. of constraints */
-		int i_no_faults;
+		int no_faults;
+		/* level max sum */
+		int l_max;
 
 		/* total size of the optimization problem */
 		int total_size;
@@ -50,58 +50,38 @@ namespace lp_opt
 		LP_OPT_INTERP() {}
 
 		LP_OPT_INTERP(
-			const int& _i_level_min_x,
-			const int& _i_level_min_y,  
-			const int& _i_level_max_x,
-			const int& _i_level_max_y, 
+			std::vector<int> _level_1,
+			std::vector<int> _level_2,  
+			const int& _dim, 
 			const int& _opt_type,
 			const vec2d& _input_faults)
 		{
-			assert(_i_level_min_x >= 1);
-			assert(_i_level_min_y >= 1);
-			assert(_i_level_max_x >= 1);
-			assert(_i_level_max_y >= 1);
-
-			assert(_i_level_max_x >= _i_level_min_x);
-			assert(_i_level_max_y >= _i_level_min_y);
-
 			assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
 
-			i_level_min_x = _i_level_min_x;
-			i_level_min_y = _i_level_min_y;
-			i_level_max_x = _i_level_max_x;
-			i_level_max_y = _i_level_max_y;
-
+			i_level_1 = _level_1;
+			i_level_2 = _level_2;
 			opt_type = _opt_type;
-
 			input_faults = _input_faults;
 
-			size_downset = get_size_downset(_i_level_max_x, _i_level_max_y);
-	
-			get_dict = python_code_caller(
-				script_name, 
-				i_level_min_x, 
-				i_level_min_y,  
-				i_level_max_x, 
-				i_level_max_y);
+			size_downset = get_size_downset(_level_2);
+			get_dict = python_code_caller(script_name, _level_1, _level_2);
 
-			valid_input_faults = filter_faults(input_faults, get_dict);
-			i_no_faults = valid_input_faults.size();
+			l_max = _level_1[0] + _level_2[1];
+			std::cout << "l_max = " << l_max << std::endl;
 
-			if(i_no_faults == 0)
+			valid_input_faults = filter_faults(input_faults, l_max, get_dict);
+			no_faults = valid_input_faults.size();
+
+			if(no_faults == 0)
 			{
 				std::cout << "Please introduce valid faults!" << std::endl;
 				exit(0);
 			}
 
-			total_size = i_no_faults*size_downset;
+			total_size = no_faults*size_downset;
 
 			given_downset = get_python_data(get_dict);
-			entire_downset = set_entire_downset_dict(
-				i_level_max_x,
-				i_level_max_y,  
-				size_downset, 
-				get_dict);
+			entire_downset = set_entire_downset_dict(_level_2, size_downset, get_dict);
 
 			aux_entire_dict = create_aux_entire_dict(entire_downset);
 			inv_M = M_inv(aux_entire_dict);
@@ -130,10 +110,10 @@ namespace lp_opt
 			glp_set_prob_name(i_lp_prob, prob_name.c_str());
 			glp_set_obj_dir(i_lp_prob, opt_type);
 
-			glp_add_rows(i_lp_prob, i_no_faults);
+			glp_add_rows(i_lp_prob, no_faults);
 			glp_add_cols(i_lp_prob, size_downset);
 
-			for(int i = 0 ; i < i_no_faults; ++i)
+			for(int i = 0 ; i < no_faults; ++i)
 			{
 				aux_var = set_aux_var_name("eq_constr_", i + 1);
 				glp_set_row_name(i_lp_prob, i + 1, aux_var.c_str());
@@ -158,7 +138,7 @@ namespace lp_opt
 			int inv_M_row_index = 0;
 			std::vector<int> fault;
 
-			for(int i = 0 ; i < i_no_faults ; ++i)
+			for(int i = 0 ; i < no_faults ; ++i)
 			{
 				fault = {valid_input_faults[i][0], valid_input_faults[i][1]};
 				auto it = aux_entire_dict.find(fault);
@@ -174,7 +154,7 @@ namespace lp_opt
 				}
 			}
 
-			for(int i = 0 ; i < i_no_faults ; ++i)
+			for(int i = 0 ; i < no_faults ; ++i)
 			{
 				for(int j = 0 ; j < size_downset ; ++j)
 				{
@@ -224,26 +204,24 @@ namespace lp_opt
 			output = create_out_dict(given_downset, c);
 
 			std::cout << std::endl;
+			std::cout<< "Dictionary before optimization: " << std::endl;
+			for(auto it = input.begin(); it != input.end(); ++it)
+			{
+				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
+			}
+			std::cout << std::endl;
+
+			std::cout << std::endl;
 			std::cout << "Input faults" << std::endl;
 			for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
 			{
 				std::cout << "{" << input_faults[i][0] << ", " << input_faults[i][1] << "} ";
 			}
 			std::cout << std::endl;
-
-			std::cout << std::endl;
 			std::cout << "Valid input faults" << std::endl;
-			for(int i = 0 ; i < i_no_faults ; ++i)
+			for(int i = 0 ; i < no_faults ; ++i)
 			{
 				std::cout << "{" << valid_input_faults[i][0] << ", " << valid_input_faults[i][1] << "} ";
-			}
-			std::cout << std::endl;
-
-			std::cout << std::endl;
-			std::cout<< "Dictionary before optimization: " << std::endl;
-			for(auto it = input.begin(); it != input.end(); ++it)
-			{
-				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
 			}
 			std::cout << std::endl;
 
