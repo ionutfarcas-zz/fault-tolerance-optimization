@@ -452,7 +452,10 @@ int get_size_downset(const std::vector<int>& level_max)
     level_max_x = level_max[0];
     level_max_y = level_max[1];
 
-    return static_cast<int>((level_max_x)*(level_max_y + 1)*0.5);
+    if(level_max_x >= level_max_y)
+        return static_cast<int>((level_max_y)*(level_max_y + 1)*0.5);
+    else
+        return static_cast<int>((level_max_x)*(level_max_x + 1)*0.5);
 }
 
 int l1_norm(const std::vector<int> u)

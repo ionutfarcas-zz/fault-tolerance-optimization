@@ -3,10 +3,9 @@
 int main(int argv, char** argc)
 {
 	std::cout << "Optimization problem started................" << std::endl;
-	std::cout << std::endl;
 	std::cout << "Please wait................................." << std::endl;
-	std::cout << std::endl;
 	std::cout << "Computing..................................." << std::endl;
+	std::cout << "Results....................................." << std::endl;
 	std::cout << std::endl;
 
 	/* specify the name of the optimization problem */
@@ -14,8 +13,8 @@ int main(int argv, char** argc)
 
 	/* specify level min and level max for which the python code will be called */
 	/* for the moment, only implemented for the same x and y levels! */
-	std::vector<int> level_1 = {1, 1};
-	std::vector<int> level_2 = {7, 7};
+	std::vector<int> level_1 = {2, 1};
+	std::vector<int> level_2 = {4, 3};
 	int dim = level_1.size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */

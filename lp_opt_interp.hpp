@@ -67,7 +67,6 @@ namespace lp_opt
 			get_dict = python_code_caller(script_name, _level_1, _level_2);
 
 			l_max = _level_1[0] + _level_2[1];
-			std::cout << "l_max = " << l_max << std::endl;
 
 			valid_input_faults = filter_faults(input_faults, l_max, get_dict);
 			no_faults = valid_input_faults.size();
@@ -82,7 +81,7 @@ namespace lp_opt
 
 			given_downset = get_python_data(get_dict);
 			entire_downset = set_entire_downset_dict(_level_2, size_downset, get_dict);
-
+		
 			aux_entire_dict = create_aux_entire_dict(entire_downset);
 			inv_M = M_inv(aux_entire_dict);
 
