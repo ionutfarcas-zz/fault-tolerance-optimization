@@ -17,26 +17,32 @@ T str_to_number(const std::string& no)
     return value;
 }
 
-std::string python_code_caller(const std::string& script_name, const std::vector<int>& level_1, const std::vector<int>& level_2)
+std::string python_code_caller(const std::string& script_name, const vec2d levels)
 {
-    int level_min_x = 0;
-    int level_min_y = 0;
-    int level_max_x = 0;
-    int level_max_y = 0;
-
+    int levels_no = 0;
+    int level_size = 0;
+    int one_level = 0;
 	std::stringstream caller;
 
-    level_min_x = level_1[0];
-    level_min_y = level_1[1];
-    level_max_x = level_2[0];
-    level_max_y = level_2[1];
+    levels_no = levels.size();
+    level_size = levels[0].size();
 
-	caller << "python " << script_name << " " << level_min_x << " " << level_min_y << " " << level_max_x << " " << level_max_y;
+    caller << "python " << script_name << " ";
+
+    for(int i = 0 ; i < level_size ; ++i)
+    {
+        for(int j = 0 ; j < levels_no ; ++j)
+        {
+            one_level = levels[i][j];
+            caller << one_level << " ";
+        }
+    }
+	//caller << "python " << script_name << " " << level_min_x << " " << level_min_y << " " << level_max_x << " " << level_max_y;
 
 	return caller.str();
 }
 
-combi_grid_dict get_python_data(const std::string& script_run)
+combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
 {
 	FILE* stream;
     char buffer[256];
@@ -44,8 +50,6 @@ combi_grid_dict get_python_data(const std::string& script_run)
     std::string level_y_str;
     std::string coeff_str;
 
-    double level_x = 0.0;
-    double level_y = 0.0;
     double coeff = 0.0;
 
     combi_grid_dict dict;   
@@ -58,16 +62,21 @@ combi_grid_dict get_python_data(const std::string& script_run)
         {
             if (fgets(buffer, sizeof(buffer), stream) != NULL)
             {
+                std::string one_level_str;
+                int one_level = 0;
             	std::vector<int> levels;
                 std::stringstream temp(buffer);
-                temp >> level_x_str >> level_y_str >> coeff_str;
 
-                level_x = str_to_number<int>(level_x_str);
-                level_y = str_to_number<int>(level_y_str);
+                for(int i = 0 ; i < dim ; ++i)
+                {
+                    temp >> one_level_str;
+                    one_level = str_to_number<int>(one_level_str);
+                    levels.push_back(one_level);
+                }
+
+                temp >> coeff_str;
                 coeff   = str_to_number<double>(coeff_str);
-                levels.push_back(level_x);
-                levels.push_back(level_y);
-
+               
                 dict.insert(std::make_pair(levels, coeff));
             }
         }
@@ -289,7 +298,11 @@ double** M_inv(const combi_grid_dict& aux_downset)
     return M_inv;
 }
 
-combi_grid_dict set_entire_downset_dict(const std::vector<int>& level_max, const int& size_downset, const std::string& script_run)
+combi_grid_dict set_entire_downset_dict(
+    const std::vector<int>& level_max, 
+    const int& size_downset, 
+    const std::string& script_run,
+    const int& dim)
 {
     int level_max_x = 0;
     int level_max_y = 0;
@@ -299,7 +312,7 @@ combi_grid_dict set_entire_downset_dict(const std::vector<int>& level_max, const
     std::vector<int> levels;
     combi_grid_dict input, output, result;
 
-    input = get_python_data(script_run);
+    input = get_python_data(script_run, dim);
     in_dict_size = input.size();
     level_max_x = level_max[0];
     level_max_y = level_max[1];
@@ -371,7 +384,11 @@ vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
     return indices;
 }
 
-vec2d filter_faults(const vec2d& faults_input, const int& l_max, const std::string& script_run)
+vec2d filter_faults(
+    const vec2d& faults_input, 
+    const int& l_max, 
+    const std::string& script_run,
+    const int& dim)
 {
     int no_faults = 0;
     int level_fault = 0;
@@ -381,7 +398,7 @@ vec2d filter_faults(const vec2d& faults_input, const int& l_max, const std::stri
     vec2d faults_output;
 
     no_faults = faults_input.size();
-    received_dict = get_python_data(script_run);
+    received_dict = get_python_data(script_run, dim);
     
     for(int i = 0 ; i < no_faults ; ++i)
     {

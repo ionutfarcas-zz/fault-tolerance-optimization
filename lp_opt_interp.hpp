@@ -13,10 +13,10 @@ namespace lp_opt
 		/* python caller */
 		std::string get_dict;
 
-		/* first level of grid indices */
-		std::vector<int> i_level_1;
-		/* second level of grid indices */
-		std::vector<int> i_level_2;
+		/* levels of grid indices */
+		vec2d i_levels;
+		/* top level of grid indices*/
+		std::vector<int> level_max;
 		/* dimension of the problem */
 		int i_dim;
 
@@ -47,28 +47,48 @@ namespace lp_opt
 		vec2d valid_input_faults;
 
 	public:
-		LP_OPT_INTERP() {}
+		LP_OPT_INTERP() 
+		{
+			get_dict = "";
+			i_dim = 0;
+			i_levels = {{0}};
+			level_max = {0};
+			no_faults = 0;
+			l_max = 0;
+			size_downset = 0;
+
+			inv_M = NULL;
+
+			constr_mat = NULL;
+			row_index = NULL;
+			col_index = NULL;
+		}
 
 		LP_OPT_INTERP(
-			std::vector<int> _level_1,
-			std::vector<int> _level_2,  
+			const vec2d& _levels,  
 			const int& _dim, 
 			const int& _opt_type,
 			const vec2d& _input_faults)
 		{
 			assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
 
-			i_level_1 = _level_1;
-			i_level_2 = _level_2;
+			i_levels = _levels;
+			i_dim = _dim;
 			opt_type = _opt_type;
 			input_faults = _input_faults;
 
-			size_downset = get_size_downset(_level_2);
-			get_dict = python_code_caller(script_name, _level_1, _level_2);
+			level_max = _levels.back();
 
-			l_max = _level_1[0] + _level_2[1];
+			size_downset = get_size_downset(level_max);
+			get_dict = python_code_caller(script_name, _levels);
+		
+			l_max = 0;
+			for(int i = 0 ; i < _dim ; ++i)
+			{
+				l_max += _levels[i][i];
+			}
 
-			valid_input_faults = filter_faults(input_faults, l_max, get_dict);
+			valid_input_faults = filter_faults(input_faults, l_max, get_dict, _dim);
 			no_faults = valid_input_faults.size();
 
 			if(no_faults == 0)
@@ -79,8 +99,8 @@ namespace lp_opt
 
 			total_size = no_faults*size_downset;
 
-			given_downset = get_python_data(get_dict);
-			entire_downset = set_entire_downset_dict(_level_2, size_downset, get_dict);
+			given_downset = get_python_data(get_dict, _dim);
+			entire_downset = set_entire_downset_dict(level_max, size_downset, get_dict, _dim);
 		
 			aux_entire_dict = create_aux_entire_dict(entire_downset);
 			inv_M = M_inv(aux_entire_dict);
@@ -94,6 +114,98 @@ namespace lp_opt
 			assert(constr_mat!= NULL);
 			assert(row_index!= NULL);
 			assert(col_index!= NULL);
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+		}
+
+		LP_OPT_INTERP(const LP_OPT_INTERP& obj)
+		{
+			i_levels = obj.i_levels;
+			i_dim = obj.i_dim;
+			opt_type = obj.opt_type;
+			input_faults = obj.input_faults;
+
+			level_max = obj.level_max;
+
+			size_downset = obj.size_downset;
+			get_dict = obj.get_dict;
+			l_max = obj.l_max;
+
+			valid_input_faults = obj.valid_input_faults;
+			no_faults = obj.no_faults;
+
+			total_size = obj.total_size;
+			given_downset = obj.given_downset;
+			entire_downset = obj.entire_downset;
+
+			aux_entire_dict = obj.aux_entire_dict;
+			inv_M = obj.inv_M;
+			downset_indices = obj.downset_indices;
+
+			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
+			assert(constr_mat!= NULL);
+			std::memcpy(constr_mat, obj.constr_mat, 1*sizeof(constr_mat));
+
+			row_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(row_index!= NULL);
+			std::memcpy(row_index, obj.row_index, 1*sizeof(row_index));
+
+			col_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(col_index!= NULL);
+			std::memcpy(col_index, obj.col_index, 1*sizeof(col_index));
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+			std::memcpy(i_lp_prob, obj.i_lp_prob, 1*sizeof(i_lp_prob));
+		}
+
+		LP_OPT_INTERP& operator= (const LP_OPT_INTERP& rhs)
+		{
+			if(&rhs == this)
+			{
+				return *this;
+			}
+
+			i_levels = rhs.i_levels;
+			i_dim = rhs.i_dim;
+			opt_type = rhs.opt_type;
+			input_faults = rhs.input_faults;
+
+			level_max = rhs.level_max;
+
+			size_downset = rhs.size_downset;
+			get_dict = rhs.get_dict;
+			l_max = rhs.l_max;
+
+			valid_input_faults = rhs.valid_input_faults;
+			no_faults = rhs.no_faults;
+
+			total_size = rhs.total_size;
+			given_downset = rhs.given_downset;
+			entire_downset = rhs.entire_downset;
+
+			aux_entire_dict = rhs.aux_entire_dict;
+			inv_M = rhs.inv_M;
+			downset_indices = rhs.downset_indices;
+
+			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
+			assert(constr_mat!= NULL);
+			std::memcpy(constr_mat, rhs.constr_mat, 1*sizeof(constr_mat));
+
+			row_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(row_index!= NULL);
+			std::memcpy(row_index, rhs.row_index, 1*sizeof(row_index));
+
+			col_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(col_index!= NULL);
+			std::memcpy(col_index, rhs.col_index, 1*sizeof(col_index));
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+			std::memcpy(i_lp_prob, rhs.i_lp_prob, 1*sizeof(i_lp_prob));
+
+			return *this;
 		}
 
 		virtual void init_opti_prob(const std::string& prob_name)
@@ -102,9 +214,6 @@ namespace lp_opt
 			std::string aux_var;
 			double neg_norm = 0.0;
 			double coeff = 0.0;
-
-			i_lp_prob = glp_create_prob();
-			assert(i_lp_prob != NULL);
 
 			glp_set_prob_name(i_lp_prob, prob_name.c_str());
 			glp_set_obj_dir(i_lp_prob, opt_type);
@@ -199,7 +308,7 @@ namespace lp_opt
 				c.push_back(c_i);
 			}
 
-			input = get_python_data(get_dict);
+			input = get_python_data(get_dict, i_dim);
 			output = create_out_dict(given_downset, c);
 
 			std::cout << std::endl;

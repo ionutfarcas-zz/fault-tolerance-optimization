@@ -19,7 +19,18 @@ namespace lp_opt
 		int total_size;
 
 	public:
-		LP_OPT_ERR_SPLIT() {}
+		LP_OPT_ERR_SPLIT() 
+		{
+			i_n = 0;
+			i_m = 0;
+			rows = 0;
+			cols = 0;
+			total_size = 0;
+
+			constr_mat = NULL;
+			row_index = NULL;
+			col_index = NULL;
+		}
 
 		LP_OPT_ERR_SPLIT(const int& _i_n, const int& _i_m, const int& _opt_type)
 		{
@@ -42,14 +53,75 @@ namespace lp_opt
 			assert(constr_mat!= NULL);
 			assert(row_index!= NULL);
 			assert(col_index!= NULL);
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+		}
+
+		LP_OPT_ERR_SPLIT(const LP_OPT_ERR_SPLIT& obj)
+		{	
+			i_n = obj.i_n;
+			i_m = obj.i_m;
+			opt_type = obj.opt_type;
+
+			rows = obj.rows;
+			cols = obj.cols;
+			total_size = obj.total_size;
+
+			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
+			assert(constr_mat!= NULL);
+			std::memcpy(constr_mat, obj.constr_mat, 1*sizeof(constr_mat));
+
+			row_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(row_index!= NULL);
+			std::memcpy(row_index, obj.row_index, 1*sizeof(row_index));
+
+			col_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(col_index!= NULL);
+			std::memcpy(col_index, obj.col_index, 1*sizeof(col_index));
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+			std::memcpy(i_lp_prob, obj.i_lp_prob, 1*sizeof(i_lp_prob));
+		}
+
+		LP_OPT_ERR_SPLIT& operator= (const LP_OPT_ERR_SPLIT& rhs)
+		{
+			if(&rhs == this)
+			{
+				return *this;
+			}
+
+			i_n = rhs.i_n;
+			i_m = rhs.i_m;
+			opt_type = rhs.opt_type;
+
+			rows = rhs.rows;
+			cols = rhs.cols;
+			total_size = rhs.total_size;
+
+			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
+			assert(constr_mat!= NULL);
+			std::memcpy(constr_mat, rhs.constr_mat, 1*sizeof(constr_mat));
+
+			row_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(row_index!= NULL);
+			std::memcpy(row_index, rhs.row_index, 1*sizeof(row_index));
+
+			col_index = (int*)malloc((1 + total_size)*sizeof(int));
+			assert(col_index!= NULL);
+			std::memcpy(col_index, rhs.col_index, 1*sizeof(col_index));
+
+			i_lp_prob = glp_create_prob();
+			assert(i_lp_prob != NULL);
+			std::memcpy(i_lp_prob, rhs.i_lp_prob, 1*sizeof(i_lp_prob));
+
+			return *this;
 		}
 
 		virtual void init_opti_prob(const std::string& prob_name)
 		{
 			std::string aux_var;
-
-			i_lp_prob = glp_create_prob();
-			assert(i_lp_prob != NULL);
 
 			glp_set_prob_name(i_lp_prob, prob_name.c_str());
 			glp_set_obj_dir(i_lp_prob, opt_type);
