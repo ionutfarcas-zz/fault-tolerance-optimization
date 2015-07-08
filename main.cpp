@@ -11,11 +11,11 @@ int main(int argv, char** argc)
 	/* specify the name of the optimization problem */
 	const std::string prob_name = "interp_based_optimization";
 
-	/* specify level min and level max for which the python code will be called */
-	/* for the moment, only implemented for the same x and y levels! */
-	// std::vector<int> level_1 = {2, 1};
-	// std::vector<int> level_2 = {4, 3};
+	/* specify levels for which the python code will be called */
+	/* the order should be from lower to higher */
 	vec2d levels = {{2, 1}, {4, 3}};
+	assert(levels.front().size() == levels.back().size());
+	
 	int dim = levels[0].size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */

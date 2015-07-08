@@ -17,12 +17,12 @@ T str_to_number(const std::string& no)
     return value;
 }
 
-std::string python_code_caller(const std::string& script_name, const vec2d levels)
+std::string python_code_caller(const std::string& script_name, const vec2d& levels)
 {
     int levels_no = 0;
     int level_size = 0;
     int one_level = 0;
-	std::stringstream caller;
+    std::stringstream caller;
 
     levels_no = levels.size();
     level_size = levels[0].size();
@@ -37,9 +37,8 @@ std::string python_code_caller(const std::string& script_name, const vec2d level
             caller << one_level << " ";
         }
     }
-	//caller << "python " << script_name << " " << level_min_x << " " << level_min_y << " " << level_max_x << " " << level_max_y;
-
-	return caller.str();
+    
+    return caller.str();
 }
 
 combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
@@ -64,7 +63,7 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
             {
                 std::string one_level_str;
                 int one_level = 0;
-            	std::vector<int> levels;
+                std::vector<int> levels;
                 std::stringstream temp(buffer);
 
                 for(int i = 0 ; i < dim ; ++i)
@@ -76,7 +75,7 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
 
                 temp >> coeff_str;
                 coeff   = str_to_number<double>(coeff_str);
-               
+
                 dict.insert(std::make_pair(levels, coeff));
             }
         }
@@ -304,41 +303,41 @@ combi_grid_dict set_entire_downset_dict(
     const std::string& script_run,
     const int& dim)
 {
-    int level_max_x = 0;
-    int level_max_y = 0;
+    int size = 1;
     int in_dict_size = 0;
     int in_out_diff = 0;
     double key = 0.0;
-    std::vector<int> levels;
+    std::vector<int> level;
+    vec2d levels;
     combi_grid_dict input, output, result;
 
     input = get_python_data(script_run, dim);
     in_dict_size = input.size();
-    level_max_x = level_max[0];
-    level_max_y = level_max[1];
 
     in_out_diff = size_downset - in_dict_size;
+    auto max_level_max = std::max_element(level_max.begin(), level_max.end());
+
+    levels = mindex(*max_level_max);
+    size = levels.size();
 
     if(in_out_diff != 0)
     {
-        for(int i = 0 ; i < level_max_x ; ++i)
+        for(int i = 0 ; i < size ; ++i)
         {
-            for(int j = 0 ; j < level_max_y - i ; ++j)
-            {
-                levels = {i + 1, j + 1};
-                auto ii = input.find(levels);
+            level = levels[i];
+            auto ii = input.find(level);
 
-                if(ii != input.end())
-                {
-                    key = ii->second;
-                    output.insert(std::make_pair(levels, key));
-                }
-                else
-                {
-                    key = 0.0;
-                    output.insert(std::make_pair(levels, key));
-                }
+            if(ii != input.end())
+            {
+                key = ii->second;
+                output.insert(std::make_pair(level, key));
             }
+            else
+            {
+                key = 0.0;
+                output.insert(std::make_pair(level, key));
+            }
+            
         }
         result = output;
     }
@@ -350,34 +349,43 @@ combi_grid_dict set_entire_downset_dict(
     return result;
 }
 
-combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset)
+combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset, const int& dim)
 {
     double key = 0;
     int i = 0;
-    std::vector<int> levels;
 
     combi_grid_dict aux_dict;
 
     for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
     {
+        std::vector<int> levels;
         key = static_cast<double>(i);
-        levels = {ii ->first[0], ii ->first[1]};
-        ++i;
 
+        for(int i = 0 ; i < dim ; ++i)
+        {
+            levels.push_back(ii->first[i]);
+        }
+
+        ++i;
         aux_dict.insert(std::make_pair(levels, key));
     }
 
     return aux_dict;
 }
 
-vec2d get_donwset_indices(const combi_grid_dict& entire_downset)
+vec2d get_downset_indices(const combi_grid_dict& entire_downset, const int& dim)
 {
     vec2d indices;
-    std::vector<int> index;
-
+    
     for(auto ii = entire_downset.begin(); ii != entire_downset.end(); ++ii)
     {
-        index = {ii ->first[0], ii ->first[1]};
+        std::vector<int> index;
+
+        for(int i = 0 ; i < dim ; ++i)
+        {
+            index.push_back(ii->first[i]);
+        }
+
         indices.push_back(index);
     }
 
@@ -454,28 +462,21 @@ std::vector<double> gen_rand(const int& size)
 
 	for(int i = 0 ; i < size ; ++i)
 	{
-     rand_var = 1e-2*(std::rand()%10);
-     output.push_back(rand_var);
- }
+       rand_var = 1e-2*(std::rand()%10);
+       output.push_back(rand_var);
+   }
 
- return output;
+   return output;
 }
 
 int get_size_downset(const std::vector<int>& level_max)
 {
-    int level_max_x = 0;
-    int level_max_y = 0;
+    auto min_level_max = std::min_element(level_max.begin(), level_max.end());
 
-    level_max_x = level_max[0];
-    level_max_y = level_max[1];
-
-    if(level_max_x >= level_max_y)
-        return static_cast<int>((level_max_y)*(level_max_y + 1)*0.5);
-    else
-        return static_cast<int>((level_max_x)*(level_max_x + 1)*0.5);
+    return static_cast<int>((*min_level_max)*(*min_level_max + 1)*0.5);
 }
 
-int l1_norm(const std::vector<int> u)
+int l1_norm(const std::vector<int>& u)
 {
     int norm = 0;
 
@@ -487,17 +488,42 @@ int l1_norm(const std::vector<int> u)
     return norm;
 }
 
-bool test_greater(const std::vector<int>& j, const std::vector<int>& i)
+bool test_greater(const std::vector<int>& b, const std::vector<int>& a)
 {
-    bool test = false;
+    int dim = a.size();
+    bool test = true;
 
-    int i_x = i[0];
-    int i_y = i[1];
 
-    int j_x = j[0];
-    int j_y = j[1];
-
-    test = ((j_x >= i_x) && (j_y >= i_y))?true:false;
-
+    for(int i = 0 ; i < dim ; ++i)
+    {
+        test *= (b[i] >= a[i])?true:false;
+    }
+    
     return test;
+}
+
+vec2d mindex(const int& level_max)
+{
+    int j = 0;
+
+    std::vector<int> temp(level_max, 1);
+    vec2d mindex_result;
+
+    while(true)
+    {
+        mindex_result.push_back(temp);
+
+        for(j = level_max - 1 ; j >= 0 ; --j)
+        {
+            if(++temp[j] <= level_max)
+                break;
+            else
+                temp[j] = 1;
+        }
+
+        if( j < 0)
+            break;
+    }
+
+    return mindex_result;
 }

@@ -102,10 +102,10 @@ namespace lp_opt
 			given_downset = get_python_data(get_dict, _dim);
 			entire_downset = set_entire_downset_dict(level_max, size_downset, get_dict, _dim);
 		
-			aux_entire_dict = create_aux_entire_dict(entire_downset);
+			aux_entire_dict = create_aux_entire_dict(entire_downset, _dim);
 			inv_M = M_inv(aux_entire_dict);
 
-			downset_indices = get_donwset_indices(entire_downset);
+			downset_indices = get_downset_indices(entire_downset, _dim);
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
 			row_index = (int*)malloc((1 + total_size)*sizeof(int));
