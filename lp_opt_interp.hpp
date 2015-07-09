@@ -33,6 +33,11 @@ namespace lp_opt
 		/* inverse of M s.t. w = Mc*/
 		double** inv_M;
 
+		/* min and max coefficients */
+		std::vector<double> min_max_coeffs_dict;
+		double min_coeff;
+		double max_coeff;
+
 		/* given downset from python code */
 		combi_grid_dict given_downset;
 		/* entire donwset with corresponding indices */
@@ -59,6 +64,10 @@ namespace lp_opt
 
 			inv_M = NULL;
 
+			min_max_coeffs_dict = {0.0};
+			min_coeff = 0.0;
+			max_coeff = 0.0;
+
 			constr_mat = NULL;
 			row_index = NULL;
 			col_index = NULL;
@@ -79,15 +88,14 @@ namespace lp_opt
 
 			level_max = _levels.back();
 
-			size_downset = get_size_downset(level_max);
+			size_downset = get_size_downset(level_max, _dim);
 			get_dict = python_code_caller(script_name, _levels);
-		
+			
 			l_max = 0;
-			for(int i = 0 ; i < _dim ; ++i)
+			for(unsigned int i = 0 ; i < _levels.size() ; ++i)
 			{
 				l_max += _levels[i][i];
 			}
-
 			valid_input_faults = filter_faults(input_faults, l_max, get_dict, _dim);
 			no_faults = valid_input_faults.size();
 
@@ -100,10 +108,13 @@ namespace lp_opt
 			total_size = no_faults*size_downset;
 
 			given_downset = get_python_data(get_dict, _dim);
+			min_max_coeffs_dict = min_max_coeffs(get_dict, _dim);
+			min_coeff = min_max_coeffs_dict[0];
+			max_coeff = min_max_coeffs_dict[1];
+			
 			entire_downset = set_entire_downset_dict(level_max, size_downset, get_dict, _dim);
-		
 			aux_entire_dict = create_aux_entire_dict(entire_downset, _dim);
-			inv_M = M_inv(aux_entire_dict);
+			inv_M = M_inv(aux_entire_dict, _dim);
 
 			downset_indices = get_downset_indices(entire_downset, _dim);
 
@@ -137,6 +148,9 @@ namespace lp_opt
 
 			total_size = obj.total_size;
 			given_downset = obj.given_downset;
+			min_max_coeffs_dict = obj.min_max_coeffs_dict;
+			min_coeff = obj.min_coeff;
+			max_coeff = obj.max_coeff;
 			entire_downset = obj.entire_downset;
 
 			aux_entire_dict = obj.aux_entire_dict;
@@ -183,6 +197,9 @@ namespace lp_opt
 
 			total_size = rhs.total_size;
 			given_downset = rhs.given_downset;
+			min_max_coeffs_dict = rhs.min_max_coeffs_dict;
+			min_coeff = rhs.min_coeff;
+			max_coeff = rhs.max_coeff;
 			entire_downset = rhs.entire_downset;
 
 			aux_entire_dict = rhs.aux_entire_dict;
@@ -210,7 +227,6 @@ namespace lp_opt
 
 		virtual void init_opti_prob(const std::string& prob_name)
 		{
-			std::vector<int> index;
 			std::string aux_var;
 			double neg_norm = 0.0;
 			double coeff = 0.0;
@@ -230,13 +246,12 @@ namespace lp_opt
 
 			for(int i = 0 ; i < size_downset ; ++i)
 			{
-				index = {downset_indices[i][0], downset_indices[i][1]};
-				neg_norm = -l1_norm(index);
+				neg_norm = -l1_norm(downset_indices[i]);
 				coeff = pow(4.0, neg_norm);
 
 				aux_var = set_aux_var_name("w", i + 1);
 				glp_set_col_name(i_lp_prob, i + 1, aux_var.c_str());
-				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, -1.0, 1.0);
+				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, min_coeff, max_coeff);
 				glp_set_obj_coef(i_lp_prob, i + 1, coeff);
 			}
 		}
@@ -244,12 +259,10 @@ namespace lp_opt
 		virtual void set_constr_matrix()
 		{
 			int inv_M_row_index = 0;
-			std::vector<int> fault;
-
+		
 			for(int i = 0 ; i < no_faults ; ++i)
 			{
-				fault = {valid_input_faults[i][0], valid_input_faults[i][1]};
-				auto it = aux_entire_dict.find(fault);
+				auto it = aux_entire_dict.find(valid_input_faults[i]);
 
 				if(it != aux_entire_dict.end())
 				{
@@ -309,13 +322,18 @@ namespace lp_opt
 			}
 
 			input = get_python_data(get_dict, i_dim);
-			output = create_out_dict(given_downset, c);
+			output = create_out_dict(given_downset, c, i_dim);
 
 			std::cout << std::endl;
 			std::cout<< "Dictionary before optimization: " << std::endl;
 			for(auto it = input.begin(); it != input.end(); ++it)
 			{
-				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
+				std::cout << "{(";
+				for(int i = 0 ; i < i_dim ; ++i)
+				{
+					std::cout << it->first[i] << " "; 
+				}
+				std::cout << "), " << it->second << "} ";
 			}
 			std::cout << std::endl;
 
@@ -323,13 +341,23 @@ namespace lp_opt
 			std::cout << "Input faults" << std::endl;
 			for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
 			{
-				std::cout << "{" << input_faults[i][0] << ", " << input_faults[i][1] << "} ";
+				std::cout << "{";
+				for(int j = 0 ; j < i_dim ; ++j)
+				{
+					std::cout << input_faults[i][j] << " ";	
+				}
+				std::cout << "} ";
 			}
 			std::cout << std::endl;
 			std::cout << "Valid input faults" << std::endl;
 			for(int i = 0 ; i < no_faults ; ++i)
 			{
-				std::cout << "{" << valid_input_faults[i][0] << ", " << valid_input_faults[i][1] << "} ";
+				std::cout << "{";
+				for(int j = 0 ; j < i_dim ; ++j)
+				{
+					std::cout << valid_input_faults[i][j] << " ";	
+				}
+				std::cout << "} ";
 			}
 			std::cout << std::endl;
 
@@ -337,7 +365,12 @@ namespace lp_opt
 			std::cout<< "Dictionary after optimization: " << std::endl;
 			for(auto it = output.begin(); it != output.end(); ++it)
 			{
-				std::cout << "{(" << it->first[0] << ", " << it->first[1] << "), " << it->second << "} ";
+				std::cout << "{(";
+				for(int j = 0 ; j < i_dim ; ++j)
+				{
+					std::cout << it->first[j] << " ";
+				}
+				std::cout << "), " << it->second << "} ";
 			}
 			std::cout << std::endl;
 			

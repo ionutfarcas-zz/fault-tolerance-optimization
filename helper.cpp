@@ -29,15 +29,15 @@ std::string python_code_caller(const std::string& script_name, const vec2d& leve
 
     caller << "python " << script_name << " ";
 
-    for(int i = 0 ; i < level_size ; ++i)
+    for(int i = 0 ; i < levels_no ; ++i)
     {
-        for(int j = 0 ; j < levels_no ; ++j)
+        for(int j = 0 ; j < level_size ; ++j)
         {
             one_level = levels[i][j];
             caller << one_level << " ";
         }
     }
-    
+
     return caller.str();
 }
 
@@ -74,7 +74,7 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
                 }
 
                 temp >> coeff_str;
-                coeff   = str_to_number<double>(coeff_str);
+                coeff = str_to_number<double>(coeff_str);
 
                 dict.insert(std::make_pair(levels, coeff));
             }
@@ -90,14 +90,36 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
     return dict;
 }
 
-double** M_matrix(const combi_grid_dict& aux_downset)
+std::vector<double> min_max_coeffs(const std::string& script_run, const int& dim)
+{
+    double min = 0.0;
+    double max = 0.0;
+    std::vector<double> min_max;
+    combi_grid_dict given_downset = get_python_data(script_run, dim);
+
+    for(auto it = given_downset.begin(); it != given_downset.end(); ++it)
+    {
+        if(it->second >= max)
+        {
+            max = it->second;
+        }
+        if(it->second <= min)
+        {
+            min = it->second;
+        }
+    }
+
+    min_max.push_back(min);
+    min_max.push_back(max);
+
+    return min_max;
+}
+
+double** M_matrix(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
     int i = 0;
     int j = 0;
-
-    std::vector<int> w;
-    std::vector<int> c;
 
     double** M = (double**)calloc(size_downset, sizeof(double*));
     for(int i = 0 ; i < size_downset ; ++i)
@@ -112,12 +134,20 @@ double** M_matrix(const combi_grid_dict& aux_downset)
         i = static_cast<int>(ii->second);
         j = 0;
 
-        w = {ii->first[0], ii->first[1]};
+        std::vector<int> w;
+        for(int it = 0 ; it < dim ; ++it)
+        {
+            w.push_back(ii->first[it]);
+        }
 
         for(auto jj = aux_downset.begin(); jj != aux_downset.end(); ++jj)
         {
+            std::vector<int> c;
+            for(int it = 0 ; it < dim ; ++it)
+            {
+                c.push_back(jj->first[it]);
+            }
             j = static_cast<int>(jj->second);
-            c = {jj->first[0], jj->first[1]};
 
             if(test_greater(c, w))
             {
@@ -133,14 +163,11 @@ double** M_matrix(const combi_grid_dict& aux_downset)
     return M;
 }
 
-double** N_matrix(const combi_grid_dict& aux_downset)
+double** N_matrix(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
     int i = 0;
     int j = 0;
-
-    std::vector<int> w;
-    std::vector<int> c;
 
     double** N = (double**)calloc(size_downset, sizeof(double*));
     for(int i = 0 ; i < size_downset ; ++i)
@@ -155,12 +182,20 @@ double** N_matrix(const combi_grid_dict& aux_downset)
         i = static_cast<int>(ii->second);
         j = 0;
 
-        w = {ii->first[0], ii->first[1]};
+        std::vector<int> w;
+        for(int it = 0 ; it < dim ; ++it)
+        {
+            w.push_back(ii->first[it]);
+        }
 
         for(auto jj = aux_downset.begin(); jj != aux_downset.end(); ++jj)
         {
+            std::vector<int> c;
+            for(int it = 0 ; it < dim ; ++it)
+            {
+                c.push_back(jj->first[it]);
+            }
             j = static_cast<int>(jj->second);
-            c = {jj->first[0], jj->first[1]};
 
             if(i == j)
             {
@@ -250,7 +285,7 @@ double** sum_pow_N(double** N, const int& size_downset)
     return result;
 }
 
-double** M_inv(const combi_grid_dict& aux_downset)
+double** M_inv(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
 
@@ -276,7 +311,7 @@ double** M_inv(const combi_grid_dict& aux_downset)
     assert(sum_N!= NULL);
     assert(M_inv!= NULL);
 
-    N = N_matrix(aux_downset);
+    N = N_matrix(aux_downset, dim);
     sum_N = sum_pow_N(N, size_downset);
 
     for(int i = 0 ; i < size_downset ; ++i)
@@ -317,7 +352,7 @@ combi_grid_dict set_entire_downset_dict(
     in_out_diff = size_downset - in_dict_size;
     auto max_level_max = std::max_element(level_max.begin(), level_max.end());
 
-    levels = mindex(*max_level_max);
+    levels = mindex(dim, *max_level_max);
     size = levels.size();
 
     if(in_out_diff != 0)
@@ -401,8 +436,7 @@ vec2d filter_faults(
     int no_faults = 0;
     int level_fault = 0;
     combi_grid_dict received_dict;
-    std::vector<int> fault;
-
+    
     vec2d faults_output;
 
     no_faults = faults_input.size();
@@ -410,16 +444,15 @@ vec2d filter_faults(
     
     for(int i = 0 ; i < no_faults ; ++i)
     {
-        fault = {faults_input[i][0], faults_input[i][1]};
-        auto it = received_dict.find(fault);
+        auto it = received_dict.find(faults_input[i]);
 
         if(it != received_dict.end())
         {
-            level_fault = faults_input[i][0] + faults_input[i][1];
+            level_fault = std::accumulate(faults_input[i].begin(), faults_input[i].end(), 0);
 
             if((level_fault == l_max) || (level_fault == (l_max - 1)))
             {
-                faults_output.push_back(fault);
+                faults_output.push_back(faults_input[i]);
             }
         }
     }
@@ -427,20 +460,24 @@ vec2d filter_faults(
     return faults_output;
 }
 
-combi_grid_dict create_out_dict(const combi_grid_dict& given_downset, const std::vector<double>& new_c)
+combi_grid_dict create_out_dict(const combi_grid_dict& given_downset, const std::vector<double>& new_c, const int& dim)
 {
     double key = 0;
     int i = 0;
-    std::vector<int> levels;
-
+   
     combi_grid_dict out_dict;
 
     for(auto ii = given_downset.begin(); ii != given_downset.end(); ++ii)
     {
+        std::vector<int> levels;
         key = new_c[i];
-        levels = {ii ->first[0], ii ->first[1]};
-        ++i;
 
+        for(int i = 0 ; i < dim ; ++i)
+        {
+            levels.push_back(ii->first[i]);
+        }
+
+        ++i;
         out_dict.insert(std::make_pair(levels, key));
     }
 
@@ -469,11 +506,19 @@ std::vector<double> gen_rand(const int& size)
    return output;
 }
 
-int get_size_downset(const std::vector<int>& level_max)
+int get_size_downset(const std::vector<int>& level_max, const int& dim)
 {
-    auto min_level_max = std::min_element(level_max.begin(), level_max.end());
+    int size = 1;
+    int min_level_max = *std::min_element(level_max.begin(), level_max.end());
 
-    return static_cast<int>((*min_level_max)*(*min_level_max + 1)*0.5);
+    for(int i = 0 ; i < dim ; ++i)
+    {
+        size *= (min_level_max + i);
+    }
+
+    size = static_cast<int>(size/(factorial(dim)));
+
+    return size;
 }
 
 int l1_norm(const std::vector<int>& u)
@@ -486,6 +531,22 @@ int l1_norm(const std::vector<int>& u)
     }
 
     return norm;
+}
+
+int factorial(const int& dim)
+{
+    int fact = 0;
+
+    if(dim == 0 || dim == 1)
+    {
+        fact = 1;
+    }
+    else
+    {
+        fact = dim*factorial(dim - 1);
+    }
+
+    return fact;
 }
 
 bool test_greater(const std::vector<int>& b, const std::vector<int>& a)
@@ -502,20 +563,26 @@ bool test_greater(const std::vector<int>& b, const std::vector<int>& a)
     return test;
 }
 
-vec2d mindex(const int& level_max)
+vec2d mindex(const int& dimension, const int& upper_limit)
 {
     int j = 0;
 
-    std::vector<int> temp(level_max, 1);
+    std::vector<int> temp(dimension, 1);
+    std::vector<int> ones;
     vec2d mindex_result;
+
+    for(int i = 0 ; i < dimension ; ++i)
+    {
+        ones.push_back(1);
+    }
 
     while(true)
     {
         mindex_result.push_back(temp);
-
-        for(j = level_max - 1 ; j >= 0 ; --j)
+    
+        for(j = dimension - 1 ; j >= 0 ; --j)
         {
-            if(++temp[j] <= level_max)
+            if(++temp[j] <= upper_limit)
                 break;
             else
                 temp[j] = 1;
