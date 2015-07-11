@@ -33,11 +33,6 @@ namespace lp_opt
 		/* inverse of M s.t. w = Mc*/
 		double** inv_M;
 
-		/* min and max coefficients */
-		std::vector<double> min_max_coeffs_dict;
-		double min_coeff;
-		double max_coeff;
-
 		/* given downset from python code */
 		combi_grid_dict given_downset;
 		/* entire donwset with corresponding indices */
@@ -64,10 +59,6 @@ namespace lp_opt
 
 			inv_M = NULL;
 
-			min_max_coeffs_dict = {0.0};
-			min_coeff = 0.0;
-			max_coeff = 0.0;
-
 			constr_mat = NULL;
 			row_index = NULL;
 			col_index = NULL;
@@ -80,7 +71,7 @@ namespace lp_opt
 			const vec2d& _input_faults)
 		{
 			assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
-
+			check_input_levels(_levels);
 			i_levels = _levels;
 			i_dim = _dim;
 			opt_type = _opt_type;
@@ -92,9 +83,10 @@ namespace lp_opt
 			get_dict = python_code_caller(script_name, _levels);
 			
 			l_max = 0;
-			for(unsigned int i = 0 ; i < _levels.size() ; ++i)
+			l_max += _levels[1][0];
+			for(int i = 1 ; i < _dim ; ++i)
 			{
-				l_max += _levels[i][i];
+				l_max += _levels[0][i];
 			}
 			valid_input_faults = filter_faults(input_faults, l_max, get_dict, _dim);
 			no_faults = valid_input_faults.size();
@@ -108,9 +100,6 @@ namespace lp_opt
 			total_size = no_faults*size_downset;
 
 			given_downset = get_python_data(get_dict, _dim);
-			min_max_coeffs_dict = min_max_coeffs(get_dict, _dim);
-			min_coeff = min_max_coeffs_dict[0];
-			max_coeff = min_max_coeffs_dict[1];
 			
 			entire_downset = set_entire_downset_dict(level_max, size_downset, get_dict, _dim);
 			aux_entire_dict = create_aux_entire_dict(entire_downset, _dim);
@@ -148,9 +137,6 @@ namespace lp_opt
 
 			total_size = obj.total_size;
 			given_downset = obj.given_downset;
-			min_max_coeffs_dict = obj.min_max_coeffs_dict;
-			min_coeff = obj.min_coeff;
-			max_coeff = obj.max_coeff;
 			entire_downset = obj.entire_downset;
 
 			aux_entire_dict = obj.aux_entire_dict;
@@ -197,9 +183,6 @@ namespace lp_opt
 
 			total_size = rhs.total_size;
 			given_downset = rhs.given_downset;
-			min_max_coeffs_dict = rhs.min_max_coeffs_dict;
-			min_coeff = rhs.min_coeff;
-			max_coeff = rhs.max_coeff;
 			entire_downset = rhs.entire_downset;
 
 			aux_entire_dict = rhs.aux_entire_dict;
@@ -251,7 +234,7 @@ namespace lp_opt
 
 				aux_var = set_aux_var_name("w", i + 1);
 				glp_set_col_name(i_lp_prob, i + 1, aux_var.c_str());
-				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, min_coeff, max_coeff);
+				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, 0.0, 1.0);
 				glp_set_obj_coef(i_lp_prob, i + 1, coeff);
 			}
 		}

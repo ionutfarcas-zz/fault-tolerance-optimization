@@ -23,8 +23,6 @@ T str_to_number(const std::string& no);
 std::string python_code_caller(const std::string& script_name, const vec2d& levels);
 /* used to get data for the GCP when minimizing the interpolation error */
 combi_grid_dict get_python_data(const std::string& script_run, const int& dim);
-/* used to get min and max coefficients from the given dictionary */
-std::vector<double> min_max_coeffs(const std::string& script_run, const int& dim);
 /* used to create the M matrix for the interpolation based problem */
 double** M_matrix(const combi_grid_dict& aux_downset, const int& dim);
 /* used to set the N matrix = M - the identity */
@@ -70,5 +68,8 @@ int factorial(const int& dim);
 bool test_greater(const std::vector<int>& b, const std::vector<int>& a);
 /* used to create a multi-index based on maximum level */
 vec2d mindex(const int& dimension, const int& upper_limit);
+/* used to check whether the input levels are correct */
+/* i.e. they satisfy: l_max - l_min = c*ones(dim) */
+void check_input_levels(const vec2d& levels);
 
 #endif /* HELPER_HPP_ */

@@ -90,31 +90,6 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
     return dict;
 }
 
-std::vector<double> min_max_coeffs(const std::string& script_run, const int& dim)
-{
-    double min = 0.0;
-    double max = 0.0;
-    std::vector<double> min_max;
-    combi_grid_dict given_downset = get_python_data(script_run, dim);
-
-    for(auto it = given_downset.begin(); it != given_downset.end(); ++it)
-    {
-        if(it->second >= max)
-        {
-            max = it->second;
-        }
-        if(it->second <= min)
-        {
-            min = it->second;
-        }
-    }
-
-    min_max.push_back(min);
-    min_max.push_back(max);
-
-    return min_max;
-}
-
 double** M_matrix(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
@@ -464,7 +439,7 @@ combi_grid_dict create_out_dict(const combi_grid_dict& given_downset, const std:
 {
     double key = 0;
     int i = 0;
-   
+
     combi_grid_dict out_dict;
 
     for(auto ii = given_downset.begin(); ii != given_downset.end(); ++ii)
@@ -499,11 +474,11 @@ std::vector<double> gen_rand(const int& size)
 
 	for(int i = 0 ; i < size ; ++i)
 	{
-       rand_var = 1e-2*(std::rand()%10);
-       output.push_back(rand_var);
-   }
+     rand_var = 1e-2*(std::rand()%10);
+     output.push_back(rand_var);
+ }
 
-   return output;
+ return output;
 }
 
 int get_size_downset(const std::vector<int>& level_max, const int& dim)
@@ -579,7 +554,7 @@ vec2d mindex(const int& dimension, const int& upper_limit)
     while(true)
     {
         mindex_result.push_back(temp);
-    
+
         for(j = dimension - 1 ; j >= 0 ; --j)
         {
             if(++temp[j] <= upper_limit)
@@ -593,4 +568,28 @@ vec2d mindex(const int& dimension, const int& upper_limit)
     }
 
     return mindex_result;
+}
+
+void check_input_levels(const vec2d& levels)
+{
+    std::vector<int> l_min = levels[0];
+    std::vector<int> l_max = levels[1];
+    std::vector<int> c;
+
+    for(unsigned int i = 0 ; i < l_min.size() ; ++i)
+    {
+        c.push_back(l_max[i] - l_min[i]);
+    }
+
+    if(std::adjacent_find(c.begin(), c.end(), std::not_equal_to<int>() ) == c.end())
+    {
+        std::cout << "Correct input levels!" << std::endl;
+    }
+    else
+    {
+        std::cout << "Input levels are incorrect!" << std::endl;
+        std::cout << "Please input them of the form: l_max = l_min + c*ones(dim), c>=1, integer" << std::endl;
+        exit(0);
+    }
+
 }
