@@ -17,6 +17,14 @@ T str_to_number(const std::string& no)
     return value;
 }
 
+template <typename T>
+void remove(std::vector<T>& vec, size_t pos)
+{
+    auto it = vec.begin();
+    std::advance(it, pos);
+    vec.erase(it);
+}
+
 std::string python_code_caller(const std::string& script_name, const vec2d& levels)
 {
     int levels_no = 0;
@@ -310,34 +318,31 @@ double** M_inv(const combi_grid_dict& aux_downset, const int& dim)
 combi_grid_dict set_entire_downset_dict(
     const std::vector<int>& level_max, 
     const int& size_downset, 
-    const std::string& script_run,
+    const combi_grid_dict& received_dict,
     const int& dim)
 {
-    int size = 1;
     int in_dict_size = 0;
     int in_out_diff = 0;
     double key = 0.0;
     std::vector<int> level;
     vec2d levels;
-    combi_grid_dict input, output, result;
+    combi_grid_dict output, result;
 
-    input = get_python_data(script_run, dim);
-    in_dict_size = input.size();
+    in_dict_size = received_dict.size();
 
     in_out_diff = size_downset - in_dict_size;
-    auto max_level_max = std::max_element(level_max.begin(), level_max.end());
+    auto min_level_max = std::min_element(level_max.begin(), level_max.end());
 
-    levels = mindex(dim, *max_level_max);
-    size = levels.size();
+    levels = mindex(dim, *min_level_max);
 
     if(in_out_diff != 0)
     {
-        for(int i = 0 ; i < size ; ++i)
+        for(int i = 0 ; i < size_downset ; ++i)
         {
             level = levels[i];
-            auto ii = input.find(level);
+            auto ii = received_dict.find(level);
 
-            if(ii != input.end())
+            if(ii != received_dict.end())
             {
                 key = ii->second;
                 output.insert(std::make_pair(level, key));
@@ -353,7 +358,7 @@ combi_grid_dict set_entire_downset_dict(
     }
     else
     {
-        result = input;
+        result = received_dict;
     }
 
     return result;
@@ -402,20 +407,13 @@ vec2d get_downset_indices(const combi_grid_dict& entire_downset, const int& dim)
     return indices;
 }
 
-vec2d filter_faults(
-    const vec2d& faults_input, 
-    const int& l_max, 
-    const std::string& script_run,
-    const int& dim)
+vec2d filter_faults(const vec2d& faults_input, const int& l_max, const combi_grid_dict& received_dict)
 {
     int no_faults = 0;
     int level_fault = 0;
-    combi_grid_dict received_dict;
-    
     vec2d faults_output;
 
     no_faults = faults_input.size();
-    received_dict = get_python_data(script_run, dim);
     
     for(int i = 0 ; i < no_faults ; ++i)
     {
@@ -474,11 +472,11 @@ std::vector<double> gen_rand(const int& size)
 
 	for(int i = 0 ; i < size ; ++i)
 	{
-     rand_var = 1e-2*(std::rand()%10);
-     output.push_back(rand_var);
- }
+       rand_var = 1e-2*(std::rand()%10);
+       output.push_back(rand_var);
+   }
 
- return output;
+   return output;
 }
 
 int get_size_downset(const std::vector<int>& level_max, const int& dim)
@@ -541,19 +539,19 @@ bool test_greater(const std::vector<int>& b, const std::vector<int>& a)
 vec2d mindex(const int& dimension, const int& upper_limit)
 {
     int j = 0;
+    int norm = 0;
 
     std::vector<int> temp(dimension, 1);
-    std::vector<int> ones;
     vec2d mindex_result;
-
-    for(int i = 0 ; i < dimension ; ++i)
-    {
-        ones.push_back(1);
-    }
 
     while(true)
     {
-        mindex_result.push_back(temp);
+        norm = l1_norm(temp);
+
+        if(norm <= upper_limit + dimension - 1)
+        {
+            mindex_result.push_back(temp);
+        }
 
         for(j = dimension - 1 ; j >= 0 ; --j)
         {
@@ -568,6 +566,79 @@ vec2d mindex(const int& dimension, const int& upper_limit)
     }
 
     return mindex_result;
+}
+
+vec2d check_dimensionality(const vec2d& input_levels, std::vector<int>& ignored_dimensions)
+{
+    std::vector<int> l_min = input_levels[0];
+    std::vector<int> l_max = input_levels[1];
+
+    std::vector<int> new_l_min;
+    std::vector<int> new_l_max;
+    vec2d new_levels;
+
+    for(unsigned int i = 0 ; i < l_min.size() ; ++i)
+    {
+        if(l_max[i] == l_min[i])
+        {
+            ignored_dimensions.push_back(i);
+        }
+        else
+        {
+            new_l_min.push_back(l_min[i]);
+            new_l_max.push_back(l_max[i]);
+        }
+    }
+
+    new_levels.push_back(new_l_min);
+    new_levels.push_back(new_l_max);
+
+    return new_levels;
+}
+
+vec2d check_faults(const vec2d& input_faults, const std::vector<int>& ignored_dimensions)
+{
+    vec2d new_faults;
+
+    for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
+    {
+        std::vector<int> new_fault;
+        for(unsigned int j = 0 ; j < input_faults[0].size() ; ++j)
+        {
+            if(std::find(ignored_dimensions.begin(), ignored_dimensions.end(), j) == ignored_dimensions.end())
+            {
+                new_fault.push_back(input_faults[i][j]);
+            }
+        }
+
+        new_faults.push_back(new_fault);
+    }
+
+    return new_faults;
+}
+
+combi_grid_dict set_new_given_dict(const combi_grid_dict& given_dict, const std::vector<int>& ignored_dimensions, const int& dim)
+{
+    double key = 0.0;
+    combi_grid_dict new_given_dict;
+
+    for(auto ii = given_dict.begin(); ii != given_dict.end(); ++ii)
+    {
+        std::vector<int> new_level;
+
+        for(int i = 0 ; i < dim ; ++i)
+        {
+            if(std::find(ignored_dimensions.begin(), ignored_dimensions.end(), i) == ignored_dimensions.end())
+            {
+                new_level.push_back(ii->first[i]);
+            }
+        }
+
+        key = ii->second;
+        new_given_dict.insert(std::make_pair(new_level, key));
+    }
+
+    return new_given_dict;
 }
 
 void check_input_levels(const vec2d& levels)

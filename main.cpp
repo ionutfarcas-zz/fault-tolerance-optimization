@@ -13,13 +13,13 @@ int main(int argv, char** argc)
 
 	/* specify levels for which the python code will be called */
 	/* the order should be from lower to higher */
-	vec2d levels = {{3, 4, 1}, {7, 8, 5}};
+	vec2d levels = {{1, 7, 1}, {3, 7, 3}};
 	assert(levels.front().size() == levels.back().size());
 	
 	int dim = levels[0].size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */
-	vec2d faults = {{1, 2, 1}, {4, 5, 2}};
+	vec2d faults = {{1, 2, 1}, {2, 7, 2}};
 
 	/* output (i.e. c vector) of the optimization problem */
 	std::vector<double> new_c;
@@ -38,5 +38,11 @@ int main(int argv, char** argc)
 
 	std::cout << std::endl;
 	std::cout << "Optimization problem terminated succesfully!" << std::endl;
+
+	std::cout << "Results " << std::endl;
+	for(unsigned int i = 0 ; i < new_c.size() ; ++i)
+	{
+		std::cout << "c[" << i << "] = " << new_c[i] << std::endl;
+	}
 	return 0;
 }

@@ -19,6 +19,9 @@ typedef std::vector<std::vector<int>> vec2d;
 /* used to convert a string to a number in any format */
 template<typename T>
 T str_to_number(const std::string& no);
+/* used to remove a vector element of vec from position pos */
+template <typename T>
+void remove(std::vector<T>& vec, size_t pos);
 /* used for calling the python code as python script_name level_min level_max */
 std::string python_code_caller(const std::string& script_name, const vec2d& levels);
 /* used to get data for the GCP when minimizing the interpolation error */
@@ -39,17 +42,13 @@ double** M_inv(const combi_grid_dict& aux_downset, const int& dim);
 combi_grid_dict set_entire_downset_dict(
     const std::vector<int>& level_max, 
     const int& size_downset, 
-    const std::string& script_run,
+    const combi_grid_dict& received_dict,
     const int& dim);
 /* used to get a vector of the entire downset indices */
 vec2d get_downset_indices(const combi_grid_dict& entire_downset, const int& dim);
 /* used to filter the input vec2d faults such that only faults from the partial downset
 (input from python) are considered */
-vec2d filter_faults(
-    const vec2d& faults_input, 
-    const int& l_max, 
-    const std::string& script_run,
-    const int& dim);
+vec2d filter_faults(const vec2d& faults_input, const int& l_max, const combi_grid_dict& received_dict);
 /* used to create an entire downset dictionary used for setting up the M matrix */
 combi_grid_dict create_aux_entire_dict(const combi_grid_dict& entire_downset, const int& dim);
 /* used to print the new dictionary after the optimization is performed */
@@ -68,6 +67,12 @@ int factorial(const int& dim);
 bool test_greater(const std::vector<int>& b, const std::vector<int>& a);
 /* used to create a multi-index based on maximum level */
 vec2d mindex(const int& dimension, const int& upper_limit);
+/* used to check input levels dimensionality */
+vec2d check_dimensionality(const vec2d& input_levels, std::vector<int>& ignored_dimensions);
+/* used to ignore certain dimensions of the input faults based on input levels & ignored dimension */
+vec2d check_faults(const vec2d& input_faults, const std::vector<int>& ignored_dimensions);
+/* used to create a new dictionary, based on the given dictionary and the ignored dimensions */
+combi_grid_dict set_new_given_dict(const combi_grid_dict& given_dict, const std::vector<int>& ignored_dimensions, const int& dim);
 /* used to check whether the input levels are correct */
 /* i.e. they satisfy: l_max - l_min = c*ones(dim) */
 void check_input_levels(const vec2d& levels);

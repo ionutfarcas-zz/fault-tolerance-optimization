@@ -20,6 +20,15 @@ namespace lp_opt
 		/* dimension of the problem */
 		int i_dim;
 
+		/* new dimensionality after the input levels are checked */
+		int new_dim;
+		/* new levels based on new_dim */
+		vec2d new_levels;
+		/* if it is the case, the dimension(s) that is/are ignored */
+		std::vector<int> ignored_dimensions;
+		/* if it is the case, new faults, based on ignored dimensions */
+		vec2d new_faults;
+
 		/* no. of constraints */
 		int no_faults;
 		/* level max sum */
@@ -35,6 +44,8 @@ namespace lp_opt
 
 		/* given downset from python code */
 		combi_grid_dict given_downset;
+		/* modified given downset based on ignored dimensions */
+		combi_grid_dict new_given_downset;
 		/* entire donwset with corresponding indices */
 		combi_grid_dict entire_downset;
 		/* auxiliary dictionary, used to create M and inv(M) */
@@ -71,24 +82,31 @@ namespace lp_opt
 			const vec2d& _input_faults)
 		{
 			assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
-			check_input_levels(_levels);
 			i_levels = _levels;
 			i_dim = _dim;
 			opt_type = _opt_type;
 			input_faults = _input_faults;
 
-			level_max = _levels.back();
-
-			size_downset = get_size_downset(level_max, _dim);
 			get_dict = python_code_caller(script_name, _levels);
+			given_downset = get_python_data(get_dict, _dim);
+
+			new_levels = check_dimensionality(_levels, ignored_dimensions);
+			new_faults =  check_faults(_input_faults, ignored_dimensions);
+			new_dim = new_levels[0].size();
+			new_given_downset = set_new_given_dict(given_downset, ignored_dimensions, _dim);
 			
-			l_max = 0;
-			l_max += _levels[1][0];
-			for(int i = 1 ; i < _dim ; ++i)
+			check_input_levels(new_levels);
+
+			level_max = new_levels.back();
+			size_downset = get_size_downset(level_max, new_dim);
+			
+			l_max = new_levels[1][0];
+			for(int i = 1 ; i < new_dim ; ++i)
 			{
-				l_max += _levels[0][i];
+				l_max += new_levels[0][i];
 			}
-			valid_input_faults = filter_faults(input_faults, l_max, get_dict, _dim);
+
+			valid_input_faults = filter_faults(new_faults, l_max, new_given_downset);
 			no_faults = valid_input_faults.size();
 
 			if(no_faults == 0)
@@ -99,13 +117,11 @@ namespace lp_opt
 
 			total_size = no_faults*size_downset;
 
-			given_downset = get_python_data(get_dict, _dim);
-			
-			entire_downset = set_entire_downset_dict(level_max, size_downset, get_dict, _dim);
-			aux_entire_dict = create_aux_entire_dict(entire_downset, _dim);
-			inv_M = M_inv(aux_entire_dict, _dim);
+			entire_downset = set_entire_downset_dict(level_max, size_downset, new_given_downset, new_dim);
+			aux_entire_dict = create_aux_entire_dict(entire_downset, new_dim);
+			inv_M = M_inv(aux_entire_dict, new_dim);
 
-			downset_indices = get_downset_indices(entire_downset, _dim);
+			downset_indices = get_downset_indices(entire_downset, new_dim);
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
 			row_index = (int*)malloc((1 + total_size)*sizeof(int));
@@ -126,10 +142,11 @@ namespace lp_opt
 			opt_type = obj.opt_type;
 			input_faults = obj.input_faults;
 
-			level_max = obj.level_max;
-
-			size_downset = obj.size_downset;
 			get_dict = obj.get_dict;
+
+			level_max = obj.level_max;
+			size_downset = obj.size_downset;
+			
 			l_max = obj.l_max;
 
 			valid_input_faults = obj.valid_input_faults;
@@ -172,10 +189,11 @@ namespace lp_opt
 			opt_type = rhs.opt_type;
 			input_faults = rhs.input_faults;
 
-			level_max = rhs.level_max;
-
-			size_downset = rhs.size_downset;
 			get_dict = rhs.get_dict;
+
+			level_max = rhs.level_max;
+			size_downset = rhs.size_downset;
+			
 			l_max = rhs.l_max;
 
 			valid_input_faults = rhs.valid_input_faults;
@@ -304,22 +322,6 @@ namespace lp_opt
 				c.push_back(c_i);
 			}
 
-			input = get_python_data(get_dict, i_dim);
-			output = create_out_dict(given_downset, c, i_dim);
-
-			std::cout << std::endl;
-			std::cout<< "Dictionary before optimization: " << std::endl;
-			for(auto it = input.begin(); it != input.end(); ++it)
-			{
-				std::cout << "{(";
-				for(int i = 0 ; i < i_dim ; ++i)
-				{
-					std::cout << it->first[i] << " "; 
-				}
-				std::cout << "), " << it->second << "} ";
-			}
-			std::cout << std::endl;
-
 			std::cout << std::endl;
 			std::cout << "Input faults" << std::endl;
 			for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
@@ -332,31 +334,24 @@ namespace lp_opt
 				std::cout << "} ";
 			}
 			std::cout << std::endl;
+			std::cout << "Ignored dimensions" << std::endl;
+			for(unsigned int i = 0 ; i < ignored_dimensions.size() ; ++i)
+			{
+				std::cout << ignored_dimensions[i] + 1 << " ";
+			}
+			std::cout << std::endl;
 			std::cout << "Valid input faults" << std::endl;
 			for(int i = 0 ; i < no_faults ; ++i)
 			{
 				std::cout << "{";
-				for(int j = 0 ; j < i_dim ; ++j)
+				for(int j = 0 ; j < new_dim ; ++j)
 				{
 					std::cout << valid_input_faults[i][j] << " ";	
 				}
 				std::cout << "} ";
 			}
 			std::cout << std::endl;
-
-			std::cout << std::endl;
-			std::cout<< "Dictionary after optimization: " << std::endl;
-			for(auto it = output.begin(); it != output.end(); ++it)
-			{
-				std::cout << "{(";
-				for(int j = 0 ; j < i_dim ; ++j)
-				{
-					std::cout << it->first[j] << " ";
-				}
-				std::cout << "), " << it->second << "} ";
-			}
-			std::cout << std::endl;
-			
+		
 			return c;
 		}
 
