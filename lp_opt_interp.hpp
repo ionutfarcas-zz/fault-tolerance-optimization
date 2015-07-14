@@ -143,6 +143,12 @@ namespace lp_opt
 			input_faults = obj.input_faults;
 
 			get_dict = obj.get_dict;
+			given_downset = obj.given_downset;
+
+			new_levels = obj.new_levels;
+			new_faults = obj.new_faults;
+			new_dim = obj.new_dim;
+			new_given_downset = obj.new_given_downset;
 
 			level_max = obj.level_max;
 			size_downset = obj.size_downset;
@@ -153,11 +159,11 @@ namespace lp_opt
 			no_faults = obj.no_faults;
 
 			total_size = obj.total_size;
-			given_downset = obj.given_downset;
+	
 			entire_downset = obj.entire_downset;
-
 			aux_entire_dict = obj.aux_entire_dict;
 			inv_M = obj.inv_M;
+
 			downset_indices = obj.downset_indices;
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
@@ -190,6 +196,12 @@ namespace lp_opt
 			input_faults = rhs.input_faults;
 
 			get_dict = rhs.get_dict;
+			given_downset = rhs.given_downset;
+
+			new_levels = rhs.new_levels;
+			new_faults = rhs.new_faults;
+			new_dim = rhs.new_dim;
+			new_given_downset = rhs.new_given_downset;
 
 			level_max = rhs.level_max;
 			size_downset = rhs.size_downset;
@@ -200,11 +212,11 @@ namespace lp_opt
 			no_faults = rhs.no_faults;
 
 			total_size = rhs.total_size;
-			given_downset = rhs.given_downset;
+	
 			entire_downset = rhs.entire_downset;
-
 			aux_entire_dict = rhs.aux_entire_dict;
 			inv_M = rhs.inv_M;
+
 			downset_indices = rhs.downset_indices;
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
