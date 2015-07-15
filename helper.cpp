@@ -603,6 +603,7 @@ vec2d check_faults(const vec2d& input_faults, const std::vector<int>& ignored_di
     for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
     {
         std::vector<int> new_fault;
+
         for(unsigned int j = 0 ; j < input_faults[0].size() ; ++j)
         {
             if(std::find(ignored_dimensions.begin(), ignored_dimensions.end(), j) == ignored_dimensions.end())
@@ -662,5 +663,4 @@ void check_input_levels(const vec2d& levels)
         std::cout << "Please input them of the form: l_max = l_min + c*ones(dim), c>=1, integer" << std::endl;
         exit(0);
     }
-
 }

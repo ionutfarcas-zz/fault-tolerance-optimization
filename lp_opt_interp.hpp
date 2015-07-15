@@ -147,6 +147,7 @@ namespace lp_opt
 
 			new_levels = obj.new_levels;
 			new_faults = obj.new_faults;
+			ignored_dimensions = obj.ignored_dimensions;
 			new_dim = obj.new_dim;
 			new_given_downset = obj.new_given_downset;
 
@@ -200,6 +201,7 @@ namespace lp_opt
 
 			new_levels = rhs.new_levels;
 			new_faults = rhs.new_faults;
+			ignored_dimensions = rhs.ignored_dimensions;
 			new_dim = rhs.new_dim;
 			new_given_downset = rhs.new_given_downset;
 
@@ -363,7 +365,34 @@ namespace lp_opt
 				std::cout << "} ";
 			}
 			std::cout << std::endl;
-		
+
+			input = get_python_data(get_dict, i_dim);
+			output = create_out_dict(input, c, i_dim);
+			std::cout<< "Dictionary before optimization: " << std::endl;
+			for(auto it = input.begin(); it != input.end(); ++it)
+			{
+				std::cout << "{(";
+				for(int j = 0 ; j < i_dim ; ++j) 
+				{
+						std::cout << it->first[j] << " ";
+				}
+				std::cout << "), " << it->second << "} ";
+			}
+			std::cout << std::endl;
+
+			std::cout << std::endl;
+			std::cout<< "Dictionary after optimization: " << std::endl;
+			for(auto it = output.begin(); it != output.end(); ++it)
+			{
+				std::cout << "{(";
+				for(int j = 0 ; j < i_dim ; ++j) 
+				{
+						std::cout << it->first[j] << " ";
+				}
+				std::cout << "), " << it->second << "} ";
+			}
+			std::cout << std::endl;
+
 			return c;
 		}
 

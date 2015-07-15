@@ -19,7 +19,7 @@ int main(int argv, char** argc)
 	int dim = levels[0].size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */
-	vec2d faults = {{1, 2, 1}, {2, 7, 2}};
+	vec2d faults = {{2, 7, 2}};
 
 	/* output (i.e. c vector) of the optimization problem */
 	std::vector<double> new_c;
@@ -30,6 +30,8 @@ int main(int argv, char** argc)
 		dim,
 		GLP_MAX,
 		faults);
+	lp_opt::LP_OPT_INTERP opt_interp1(opt_interp);
+	lp_opt::LP_OPT_INTERP opt_interp2 = opt_interp;
 	opt_interp.init_opti_prob(prob_name);
 	opt_interp.set_constr_matrix();
 	opt_interp.solve_opti_problem();
