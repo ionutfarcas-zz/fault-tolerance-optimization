@@ -87,7 +87,7 @@ namespace lp_opt
 			opt_type = _opt_type;
 			input_faults = _input_faults;
 
-			get_dict = python_code_caller(script_name, _levels);
+			get_dict = python_code_caller(script_name, _levels, _dim);
 			given_downset = get_python_data(get_dict, _dim);
 
 			new_levels = check_dimensionality(_levels, ignored_dimensions);
@@ -160,7 +160,7 @@ namespace lp_opt
 			no_faults = obj.no_faults;
 
 			total_size = obj.total_size;
-	
+			
 			entire_downset = obj.entire_downset;
 			aux_entire_dict = obj.aux_entire_dict;
 			inv_M = obj.inv_M;
@@ -214,7 +214,7 @@ namespace lp_opt
 			no_faults = rhs.no_faults;
 
 			total_size = rhs.total_size;
-	
+			
 			entire_downset = rhs.entire_downset;
 			aux_entire_dict = rhs.aux_entire_dict;
 			inv_M = rhs.inv_M;
@@ -274,7 +274,7 @@ namespace lp_opt
 		virtual void set_constr_matrix()
 		{
 			int inv_M_row_index = 0;
-		
+			
 			for(int i = 0 ; i < no_faults ; ++i)
 			{
 				auto it = aux_entire_dict.find(valid_input_faults[i]);
@@ -349,6 +349,10 @@ namespace lp_opt
 			}
 			std::cout << std::endl;
 			std::cout << "Ignored dimensions" << std::endl;
+			if(ignored_dimensions.size() == 0)
+			{
+				std::cout << "None!";
+			}
 			for(unsigned int i = 0 ; i < ignored_dimensions.size() ; ++i)
 			{
 				std::cout << ignored_dimensions[i] + 1 << " ";
@@ -372,39 +376,39 @@ namespace lp_opt
 			for(auto it = input.begin(); it != input.end(); ++it)
 			{
 				std::cout << "{(";
-				for(int j = 0 ; j < i_dim ; ++j) 
-				{
+					for(int j = 0 ; j < i_dim ; ++j) 
+					{
 						std::cout << it->first[j] << " ";
-				}
-				std::cout << "), " << it->second << "} ";
-			}
-			std::cout << std::endl;
+					}
+					std::cout << "), " << it->second << "} ";
+}
+std::cout << std::endl;
 
-			std::cout << std::endl;
-			std::cout<< "Dictionary after optimization: " << std::endl;
-			for(auto it = output.begin(); it != output.end(); ++it)
-			{
-				std::cout << "{(";
-				for(int j = 0 ; j < i_dim ; ++j) 
-				{
-						std::cout << it->first[j] << " ";
-				}
-				std::cout << "), " << it->second << "} ";
-			}
-			std::cout << std::endl;
-
-			return c;
-		}
-
-		virtual ~LP_OPT_INTERP()
+std::cout << std::endl;
+std::cout<< "Dictionary after optimization: " << std::endl;
+for(auto it = output.begin(); it != output.end(); ++it)
+{
+	std::cout << "{(";
+		for(int j = 0 ; j < i_dim ; ++j) 
 		{
-			free(constr_mat);
-			free(row_index);
-			free(col_index);
-
-			glp_delete_prob(i_lp_prob);
+			std::cout << it->first[j] << " ";
 		}
-	};
+		std::cout << "), " << it->second << "} ";
+}
+std::cout << std::endl;
+
+return c;
+}
+
+virtual ~LP_OPT_INTERP()
+{
+	free(constr_mat);
+	free(row_index);
+	free(col_index);
+
+	glp_delete_prob(i_lp_prob);
+}
+};
 }
 
 #endif /* LPOPTINTERP_HPP_ */

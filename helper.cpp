@@ -25,7 +25,7 @@ void remove(std::vector<T>& vec, size_t pos)
     vec.erase(it);
 }
 
-std::string python_code_caller(const std::string& script_name, const vec2d& levels)
+std::string python_code_caller(const std::string& script_name, const vec2d& levels, const int& dim)
 {
     int levels_no = 0;
     int level_size = 0;
@@ -35,7 +35,7 @@ std::string python_code_caller(const std::string& script_name, const vec2d& leve
     levels_no = levels.size();
     level_size = levels[0].size();
 
-    caller << "python " << script_name << " ";
+    caller << "python " << script_name << " " << dim << " ";
 
     for(int i = 0 ; i < levels_no ; ++i)
     {

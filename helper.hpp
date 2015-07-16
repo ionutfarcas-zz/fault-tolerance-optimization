@@ -23,7 +23,7 @@ T str_to_number(const std::string& no);
 template <typename T>
 void remove(std::vector<T>& vec, size_t pos);
 /* used for calling the python code as python script_name level_min level_max */
-std::string python_code_caller(const std::string& script_name, const vec2d& levels);
+std::string python_code_caller(const std::string& script_name, const vec2d& levels, const int& dim);
 /* used to get data for the GCP when minimizing the interpolation error */
 combi_grid_dict get_python_data(const std::string& script_run, const int& dim);
 /* used to create the M matrix for the interpolation based problem */
