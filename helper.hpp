@@ -11,6 +11,8 @@
 #include <cassert>
 #include <cstdlib>
 #include <cmath>
+#include <chrono>
+#include <valarray>
 
 
 typedef std::multimap<std::vector<int>, double> combi_grid_dict;
@@ -38,6 +40,8 @@ double** N_pow_k(double** N, const int& size_downset, const int& k);
 double** sum_pow_N(double** N, const int& size_downset);
 /* used to create the inverse of M matrix for the interpolation based problem */
 double** M_inv(const combi_grid_dict& aux_downset, const int& dim);
+/* used to create the inverse of M in a clever way */
+double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim);
 /* used to create the inverse of M matrix for the interpolation based problem */
 combi_grid_dict set_entire_downset_dict(
     const std::vector<int>& level_max, 

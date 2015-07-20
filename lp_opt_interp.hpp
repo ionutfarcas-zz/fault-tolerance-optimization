@@ -57,6 +57,30 @@ namespace lp_opt
 		/* faults that are in the given downset from the set of input faults */
 		vec2d valid_input_faults;
 
+		void test()
+		{
+			std::cout << "inv M" << std::endl;
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				for(int j = 0 ; j < size_downset ; ++j)
+				{
+					std::cout << inv_M[i][j] << " ";
+				}
+				std::cout << std::endl;
+			}
+
+			double** M = inv_M_clever(aux_entire_dict, i_dim);
+			std::cout << "inv_M_clever" << std::endl;
+			for(int i = 0 ; i < size_downset ; ++i)
+			{
+				for(int j = 0 ; j < size_downset ; ++j)
+				{
+					std::cout << M[i][j] << " ";
+				}
+				std::cout << std::endl;
+			}
+		}
+
 	public:
 		LP_OPT_INTERP() 
 		{
@@ -119,8 +143,13 @@ namespace lp_opt
 
 			entire_downset = set_entire_downset_dict(level_max, size_downset, new_given_downset, new_dim);
 			aux_entire_dict = create_aux_entire_dict(entire_downset, new_dim);
+			auto t1 = std::chrono::high_resolution_clock::now();
 			inv_M = M_inv(aux_entire_dict, new_dim);
-
+			auto t2 = std::chrono::high_resolution_clock::now();
+			test();
+			std::cout << "In constructor, inv_M "
+			<< std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
+			<< " seconds\n";
 			downset_indices = get_downset_indices(entire_downset, new_dim);
 
 			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));

@@ -315,6 +315,54 @@ double** M_inv(const combi_grid_dict& aux_downset, const int& dim)
     return M_inv;
 }
 
+double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim)
+{
+    int size_downset = aux_downset.size();
+    int i = 0;
+    int j = 0;
+
+    std::valarray<int> c(dim);
+    std::valarray<int> w(dim);
+    std::valarray<int> diff(dim);
+
+    double** M_inv = (double**)calloc(size_downset, sizeof(double*));
+    for(int i = 0 ; i < size_downset ; ++i)
+    {
+        M_inv[i] = (double*)calloc(size_downset, sizeof(double));
+    }
+
+    assert(M_inv!= NULL);
+
+    for(auto ii = aux_downset.begin(); ii != aux_downset.end(); ++ii)
+    {
+        i = static_cast<int>(ii->second);
+        for(int it = 0 ; it < dim ; ++it)
+        {
+            w[it] = ii->first[it];
+        }
+
+        for(auto jj = aux_downset.begin(); jj != aux_downset.end(); ++jj)
+        {
+            j = static_cast<int>(jj->second);
+            for(int it = 0 ; it < dim ; ++it)
+            {
+                c[it] = jj->first[it];
+            }
+
+            diff = c - w;
+
+            //std::cout << diff.sum() << std::endl;
+
+            if(((diff.sum() >=0) || (diff.sum() <=dim)) && diff.max() == 1)
+            {
+                M_inv[i][j] = pow(-1, diff.sum());
+            }
+        }
+    }
+
+    return M_inv;
+}
+
 combi_grid_dict set_entire_downset_dict(
     const std::vector<int>& level_max, 
     const int& size_downset, 

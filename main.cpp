@@ -26,16 +26,34 @@ int main(int argv, char** argc)
 	std::vector<double> new_c;
 
 	/* start the optimization problem */
+	auto t1 = std::chrono::high_resolution_clock::now();
 	lp_opt::LP_OPT_INTERP opt_interp(
 		levels, 
 		dim,
 		GLP_MAX,
 		faults);
-	lp_opt::LP_OPT_INTERP opt_interp1(opt_interp);
-	lp_opt::LP_OPT_INTERP opt_interp2 = opt_interp;
+	auto t2 = std::chrono::high_resolution_clock::now();
+    std::cout << "Constructor call "
+              << std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
+              << " seconds\n";
+    auto t3 = std::chrono::high_resolution_clock::now();
 	opt_interp.init_opti_prob(prob_name);
+	auto t4 = std::chrono::high_resolution_clock::now();
+    std::cout << "init_opti_prob call "
+              << std::chrono::duration_cast<std::chrono::seconds>(t4-t3).count()
+              << " seconds\n";
+    auto t5 = std::chrono::high_resolution_clock::now();
 	opt_interp.set_constr_matrix();
+	auto t6 = std::chrono::high_resolution_clock::now();
+    std::cout << "set_constr_matrix "
+              << std::chrono::duration_cast<std::chrono::seconds>(t6-t5).count()
+              << " seconds\n";
+    auto t7 = std::chrono::high_resolution_clock::now();
 	opt_interp.solve_opti_problem();
+	auto t8 = std::chrono::high_resolution_clock::now();
+    std::cout << "solve_opti_problem "
+              << std::chrono::duration_cast<std::chrono::seconds>(t8-t7).count()
+              << " seconds\n";
 	new_c = opt_interp.get_results();
 	/* end the optimization problem */
 
