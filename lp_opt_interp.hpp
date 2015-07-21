@@ -19,6 +19,8 @@ namespace lp_opt
 		std::vector<int> level_max;
 		/* dimension of the problem */
 		int i_dim;
+		/* total size of the optimization problem */
+		int total_size;
 
 		/* new dimensionality after the input levels are checked */
 		int new_dim;
@@ -34,13 +36,14 @@ namespace lp_opt
 		/* level max sum */
 		int l_max;
 
-		/* total size of the optimization problem */
-		int total_size;
+		//  total size of the optimization problem 
+		// int total_size;
 		/* down set size */
 		int size_downset;
 
 		/* inverse of M s.t. w = Mc*/
-		double** inv_M;
+		//double** inv_M;
+		matrix inv_M;
 
 		/* given downset from python code */
 		combi_grid_dict given_downset;
@@ -57,30 +60,6 @@ namespace lp_opt
 		/* faults that are in the given downset from the set of input faults */
 		vec2d valid_input_faults;
 
-		void test()
-		{
-			std::cout << "inv M" << std::endl;
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				for(int j = 0 ; j < size_downset ; ++j)
-				{
-					std::cout << inv_M[i][j] << " ";
-				}
-				std::cout << std::endl;
-			}
-
-			double** M = inv_M_clever(aux_entire_dict, i_dim);
-			std::cout << "inv_M_clever" << std::endl;
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				for(int j = 0 ; j < size_downset ; ++j)
-				{
-					std::cout << M[i][j] << " ";
-				}
-				std::cout << std::endl;
-			}
-		}
-
 	public:
 		LP_OPT_INTERP() 
 		{
@@ -91,12 +70,6 @@ namespace lp_opt
 			no_faults = 0;
 			l_max = 0;
 			size_downset = 0;
-
-			inv_M = NULL;
-
-			constr_mat = NULL;
-			row_index = NULL;
-			col_index = NULL;
 		}
 
 		LP_OPT_INTERP(
@@ -143,22 +116,12 @@ namespace lp_opt
 
 			entire_downset = set_entire_downset_dict(level_max, size_downset, new_given_downset, new_dim);
 			aux_entire_dict = create_aux_entire_dict(entire_downset, new_dim);
-			auto t1 = std::chrono::high_resolution_clock::now();
-			inv_M = M_inv(aux_entire_dict, new_dim);
-			auto t2 = std::chrono::high_resolution_clock::now();
-			test();
-			std::cout << "In constructor, inv_M "
-			<< std::chrono::duration_cast<std::chrono::seconds>(t2-t1).count()
-			<< " seconds\n";
+			inv_M = get_inv_M(aux_entire_dict, new_dim);
 			downset_indices = get_downset_indices(entire_downset, new_dim);
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-
-			assert(constr_mat!= NULL);
-			assert(row_index!= NULL);
-			assert(col_index!= NULL);
+			constr_mat.reserve(1 + total_size);
+			row_index.reserve(1 + total_size);
+			col_index.reserve(1 + total_size);
 
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
@@ -196,18 +159,10 @@ namespace lp_opt
 
 			downset_indices = obj.downset_indices;
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			assert(constr_mat!= NULL);
-			std::memcpy(constr_mat, obj.constr_mat, 1*sizeof(constr_mat));
-
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(row_index!= NULL);
-			std::memcpy(row_index, obj.row_index, 1*sizeof(row_index));
-
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(col_index!= NULL);
-			std::memcpy(col_index, obj.col_index, 1*sizeof(col_index));
-
+			constr_mat = obj.constr_mat;
+			row_index = obj.row_index;
+			col_index = obj.col_index;
+			
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
 			std::memcpy(i_lp_prob, obj.i_lp_prob, 1*sizeof(i_lp_prob));
@@ -250,17 +205,9 @@ namespace lp_opt
 
 			downset_indices = rhs.downset_indices;
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			assert(constr_mat!= NULL);
-			std::memcpy(constr_mat, rhs.constr_mat, 1*sizeof(constr_mat));
-
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(row_index!= NULL);
-			std::memcpy(row_index, rhs.row_index, 1*sizeof(row_index));
-
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(col_index!= NULL);
-			std::memcpy(col_index, rhs.col_index, 1*sizeof(col_index));
+			constr_mat = rhs.constr_mat;
+			row_index = rhs.row_index;
+			col_index = rhs.col_index;
 
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
@@ -297,6 +244,7 @@ namespace lp_opt
 				glp_set_col_name(i_lp_prob, i + 1, aux_var.c_str());
 				glp_set_col_bnds(i_lp_prob, i + 1, GLP_DB, 0.0, 1.0);
 				glp_set_obj_coef(i_lp_prob, i + 1, coeff);
+				glp_set_col_kind(i_lp_prob, i + 1, GLP_BV);
 			}
 		}
 
@@ -336,12 +284,15 @@ namespace lp_opt
 
 		virtual void solve_opti_problem() const
 		{
-			glp_load_matrix(i_lp_prob, total_size, row_index, col_index, constr_mat);
+			glp_load_matrix(i_lp_prob, total_size, &row_index[0], &col_index[0], &constr_mat[0]);
 			glp_simplex(i_lp_prob, NULL);	
+			glp_intopt(i_lp_prob, NULL);
 		}
 
 		virtual std::vector<double> get_results() const
-		{
+		{	
+			int status = 0;
+
 			double w_i = 0.0;
 			double c_i = 0.0;
 			std::vector<double> w;		
@@ -349,95 +300,101 @@ namespace lp_opt
 
 			combi_grid_dict input, output;
 
-			for(int i = 0 ; i < size_downset ; ++i)
-			{
-				w_i = glp_get_col_prim(i_lp_prob, i + 1);
-				w.push_back(w_i);
-			}
+			status = glp_mip_status(i_lp_prob);
 
-			for(int i = 0 ; i < size_downset ; ++i)
+			if(status == GLP_OPT)
 			{
-				c_i = 0.0;
-				for(int j = 0 ; j < size_downset ; ++j)
+				for(int i = 0 ; i < size_downset ; ++i)
 				{
-					c_i += inv_M[i][j]*w[j];
+					w_i = glp_get_col_prim(i_lp_prob, i + 1);
+					w.push_back(w_i);
 				}
-				c.push_back(c_i);
-			}
 
-			std::cout << std::endl;
-			std::cout << "Input faults" << std::endl;
-			for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
-			{
-				std::cout << "{";
-				for(int j = 0 ; j < i_dim ; ++j)
+				for(int i = 0 ; i < size_downset ; ++i)
 				{
-					std::cout << input_faults[i][j] << " ";	
+					c_i = 0.0;
+					for(int j = 0 ; j < size_downset ; ++j)
+					{
+						c_i += inv_M[i][j]*w[j];
+					}
+					c.push_back(c_i);
 				}
-				std::cout << "} ";
-			}
-			std::cout << std::endl;
-			std::cout << "Ignored dimensions" << std::endl;
-			if(ignored_dimensions.size() == 0)
-			{
-				std::cout << "None!";
-			}
-			for(unsigned int i = 0 ; i < ignored_dimensions.size() ; ++i)
-			{
-				std::cout << ignored_dimensions[i] + 1 << " ";
-			}
-			std::cout << std::endl;
-			std::cout << "Valid input faults" << std::endl;
-			for(int i = 0 ; i < no_faults ; ++i)
-			{
-				std::cout << "{";
-				for(int j = 0 ; j < new_dim ; ++j)
-				{
-					std::cout << valid_input_faults[i][j] << " ";	
-				}
-				std::cout << "} ";
-			}
-			std::cout << std::endl;
 
-			input = get_python_data(get_dict, i_dim);
-			output = create_out_dict(input, c, i_dim);
-			std::cout<< "Dictionary before optimization: " << std::endl;
-			for(auto it = input.begin(); it != input.end(); ++it)
-			{
+				std::cout << std::endl;
+				std::cout << "Input faults" << std::endl;
+				for(unsigned int i = 0 ; i < input_faults.size() ; ++i)
+				{
+					std::cout << "{";
+					for(int j = 0 ; j < i_dim ; ++j)
+					{
+						std::cout << input_faults[i][j] << " ";	
+					}
+					std::cout << "} ";
+				}
+				std::cout << std::endl;
+				std::cout << "Ignored dimensions" << std::endl;
+				if(ignored_dimensions.size() == 0)
+				{
+					std::cout << "None!";
+				}
+				for(unsigned int i = 0 ; i < ignored_dimensions.size() ; ++i)
+				{
+					std::cout << ignored_dimensions[i] + 1 << " ";
+				}
+				std::cout << std::endl;
+				std::cout << "Valid input faults" << std::endl;
+				for(int i = 0 ; i < no_faults ; ++i)
+				{
+					std::cout << "{";
+					for(int j = 0 ; j < new_dim ; ++j)
+					{
+						std::cout << valid_input_faults[i][j] << " ";	
+					}
+					std::cout << "} ";
+				}
+				std::cout << std::endl;
+
+				input = get_python_data(get_dict, i_dim);
+				output = create_out_dict(input, c, i_dim);
+				std::cout<< "Dictionary before optimization: " << std::endl;
+				for(auto it = input.begin(); it != input.end(); ++it)
+				{
+					std::cout << "{(";
+						for(int j = 0 ; j < i_dim ; ++j) 
+						{
+							std::cout << it->first[j] << " ";
+						}
+						std::cout << "), " << it->second << "} ";
+				}
+				std::cout << std::endl;
+
+				std::cout << std::endl;
+				std::cout<< "Dictionary after optimization: " << std::endl;
+				for(auto it = output.begin(); it != output.end(); ++it)
+				{
 				std::cout << "{(";
 					for(int j = 0 ; j < i_dim ; ++j) 
 					{
 						std::cout << it->first[j] << " ";
 					}
 					std::cout << "), " << it->second << "} ";
-}
-std::cout << std::endl;
+				}
+				std::cout << std::endl;
 
-std::cout << std::endl;
-std::cout<< "Dictionary after optimization: " << std::endl;
-for(auto it = output.begin(); it != output.end(); ++it)
-{
-	std::cout << "{(";
-		for(int j = 0 ; j < i_dim ; ++j) 
-		{
-			std::cout << it->first[j] << " ";
+				return c;
+			}
+			else
+			{
+				std::cout << "Error: Optimal solution not found!" << std::endl;
+				exit(0);
+			}
 		}
-		std::cout << "), " << it->second << "} ";
-}
-std::cout << std::endl;
 
-return c;
-}
-
-virtual ~LP_OPT_INTERP()
-{
-	free(constr_mat);
-	free(row_index);
-	free(col_index);
-
-	glp_delete_prob(i_lp_prob);
-}
-};
+		virtual ~LP_OPT_INTERP()
+		{
+			glp_delete_prob(i_lp_prob);
+		}
+	};
 }
 
 #endif /* LPOPTINTERP_HPP_ */

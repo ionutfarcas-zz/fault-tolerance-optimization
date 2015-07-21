@@ -26,10 +26,6 @@ namespace lp_opt
 			rows = 0;
 			cols = 0;
 			total_size = 0;
-
-			constr_mat = NULL;
-			row_index = NULL;
-			col_index = NULL;
 		}
 
 		LP_OPT_ERR_SPLIT(const int& _i_n, const int& _i_m, const int& _opt_type)
@@ -46,13 +42,9 @@ namespace lp_opt
 			cols = _i_n + _i_m;
 			total_size = rows*cols;
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-
-			assert(constr_mat!= NULL);
-			assert(row_index!= NULL);
-			assert(col_index!= NULL);
+			constr_mat.reserve(1 + total_size);
+			row_index.reserve(1 + total_size);
+			col_index.reserve(1 + total_size);
 
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
@@ -68,17 +60,9 @@ namespace lp_opt
 			cols = obj.cols;
 			total_size = obj.total_size;
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			assert(constr_mat!= NULL);
-			std::memcpy(constr_mat, obj.constr_mat, 1*sizeof(constr_mat));
-
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(row_index!= NULL);
-			std::memcpy(row_index, obj.row_index, 1*sizeof(row_index));
-
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(col_index!= NULL);
-			std::memcpy(col_index, obj.col_index, 1*sizeof(col_index));
+			constr_mat = obj.constr_mat;
+			row_index = obj.row_index;
+			col_index = obj.col_index;
 
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
@@ -100,17 +84,9 @@ namespace lp_opt
 			cols = rhs.cols;
 			total_size = rhs.total_size;
 
-			constr_mat = (double*)malloc((1 + total_size)*sizeof(double));
-			assert(constr_mat!= NULL);
-			std::memcpy(constr_mat, rhs.constr_mat, 1*sizeof(constr_mat));
-
-			row_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(row_index!= NULL);
-			std::memcpy(row_index, rhs.row_index, 1*sizeof(row_index));
-
-			col_index = (int*)malloc((1 + total_size)*sizeof(int));
-			assert(col_index!= NULL);
-			std::memcpy(col_index, rhs.col_index, 1*sizeof(col_index));
+			constr_mat = rhs.constr_mat;
+			row_index = rhs.row_index;
+			col_index = rhs.col_index;
 
 			i_lp_prob = glp_create_prob();
 			assert(i_lp_prob != NULL);
@@ -237,7 +213,7 @@ namespace lp_opt
 
 		virtual void solve_opti_problem() const
 		{
-			glp_load_matrix(i_lp_prob, total_size, row_index, col_index, constr_mat);
+			glp_load_matrix(i_lp_prob, total_size, &row_index[0], &col_index[0], &constr_mat[0]);
 			glp_simplex(i_lp_prob, NULL);	
 		}
 
@@ -257,10 +233,6 @@ namespace lp_opt
 
 		virtual ~LP_OPT_ERR_SPLIT()
 		{
-			free(constr_mat);
-			free(row_index);
-			free(col_index);
-
 			glp_delete_prob(i_lp_prob);
 		}
 	};

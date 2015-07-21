@@ -98,19 +98,13 @@ combi_grid_dict get_python_data(const std::string& script_run, const int& dim)
     return dict;
 }
 
-double** M_matrix(const combi_grid_dict& aux_downset, const int& dim)
+matrix create_M_matrix(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
     int i = 0;
     int j = 0;
-
-    double** M = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        M[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    assert(M!= NULL);
+    
+    matrix M(size_downset, std::vector<double>(size_downset, 0.0));
 
     for(auto ii = aux_downset.begin(); ii != aux_downset.end(); ++ii)
     {
@@ -146,176 +140,7 @@ double** M_matrix(const combi_grid_dict& aux_downset, const int& dim)
     return M;
 }
 
-double** N_matrix(const combi_grid_dict& aux_downset, const int& dim)
-{
-    int size_downset = aux_downset.size();
-    int i = 0;
-    int j = 0;
-
-    double** N = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        N[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    assert(N!= NULL);
-
-    for(auto ii = aux_downset.begin(); ii != aux_downset.end(); ++ii)
-    {
-        i = static_cast<int>(ii->second);
-        j = 0;
-
-        std::vector<int> w;
-        for(int it = 0 ; it < dim ; ++it)
-        {
-            w.push_back(ii->first[it]);
-        }
-
-        for(auto jj = aux_downset.begin(); jj != aux_downset.end(); ++jj)
-        {
-            std::vector<int> c;
-            for(int it = 0 ; it < dim ; ++it)
-            {
-                c.push_back(jj->first[it]);
-            }
-            j = static_cast<int>(jj->second);
-
-            if(i == j)
-            {
-                N[i][j] = 0.0;
-            }
-            else if(test_greater(c, w))
-            {
-                N[i][j] = 1.0;
-            }
-            else
-            {
-                N[i][j] = 0.0;   
-            }
-        }
-    }
-
-    return N;
-}
-
-double** mat_prod(double** A, double** B, const int& dim)
-{
-    double** result = (double**)calloc(dim, sizeof(double*));
-    for(int i = 0 ; i < dim ; ++i)
-    {
-        result[i] = (double*)calloc(dim, sizeof(double));
-    }
-
-    for(int i = 0 ; i < dim ; ++i)
-    {
-        for(int j = 0 ; j < dim ; ++j)
-        {
-            for(int k = 0 ; k < dim ; ++k)
-            {
-                result[i][j] += A[i][k]*B[k][j];
-            }
-        }
-    }
-
-    return result;
-}
-
-double** N_pow_k(double** N, const int& size_downset, const int& k)
-{
-    if(k == 1)
-    {
-        return N;
-    }
-    else
-    {
-        return (mat_prod(N, N_pow_k(N, size_downset, k-1), size_downset));
-    }
-}
-
-double** sum_pow_N(double** N, const int& size_downset)
-{
-    int sign = 0;
-
-    double** N_to_k = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        N_to_k[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    double** result = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        result[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    assert(N_to_k!= NULL);
-    assert(result!= NULL);
-
-    for (int k = 1 ; k <= size_downset - 1 ; ++k)
-    {
-        sign = pow(-1, k);
-        N_to_k = N_pow_k(N, size_downset, k);
-
-        for(int i = 0 ; i < size_downset ; ++i)
-        {
-            for(int j = i ; j < size_downset ; ++j)
-            {
-                result[i][j] += sign*N_to_k[i][j];
-            }
-        }
-    }
-
-    return result;
-}
-
-double** M_inv(const combi_grid_dict& aux_downset, const int& dim)
-{
-    int size_downset = aux_downset.size();
-
-    double** N = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        N[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    double** sum_N = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        sum_N[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    double** M_inv = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        M_inv[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    assert(N!= NULL);
-    assert(sum_N!= NULL);
-    assert(M_inv!= NULL);
-
-    N = N_matrix(aux_downset, dim);
-    sum_N = sum_pow_N(N, size_downset);
-
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        for(int j = i ; j < size_downset ; ++j)
-        {
-            if(i == j)
-            {
-                M_inv[i][j] = 1.0;
-            }
-            else
-            {
-                M_inv[i][j] = sum_N[i][j];
-            }
-        }
-    }
-
-    return M_inv;
-}
-
-double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim)
+matrix get_inv_M(const combi_grid_dict& aux_downset, const int& dim)
 {
     int size_downset = aux_downset.size();
     int i = 0;
@@ -324,14 +149,9 @@ double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim)
     std::valarray<int> c(dim);
     std::valarray<int> w(dim);
     std::valarray<int> diff(dim);
+    std::valarray<int> zeros(0, dim);
 
-    double** M_inv = (double**)calloc(size_downset, sizeof(double*));
-    for(int i = 0 ; i < size_downset ; ++i)
-    {
-        M_inv[i] = (double*)calloc(size_downset, sizeof(double));
-    }
-
-    assert(M_inv!= NULL);
+    matrix M_inv(size_downset, std::vector<double>(size_downset, 0.0));
 
     for(auto ii = aux_downset.begin(); ii != aux_downset.end(); ++ii)
     {
@@ -341,7 +161,7 @@ double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim)
             w[it] = ii->first[it];
         }
 
-        for(auto jj = aux_downset.begin(); jj != aux_downset.end(); ++jj)
+        for(auto jj = ii; jj != aux_downset.end(); ++jj)
         {
             j = static_cast<int>(jj->second);
             for(int it = 0 ; it < dim ; ++it)
@@ -351,9 +171,7 @@ double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim)
 
             diff = c - w;
 
-            //std::cout << diff.sum() << std::endl;
-
-            if(((diff.sum() >=0) || (diff.sum() <=dim)) && diff.max() == 1)
+            if(((diff.sum() > 0) || (diff.sum() <=dim)) && ((diff.max() <= 1) && (diff >= zeros).min()))
             {
                 M_inv[i][j] = pow(-1, diff.sum());
             }

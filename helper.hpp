@@ -17,6 +17,7 @@
 
 typedef std::multimap<std::vector<int>, double> combi_grid_dict;
 typedef std::vector<std::vector<int>> vec2d;
+typedef std::vector<std::vector<double>> matrix;
 
 /* used to convert a string to a number in any format */
 template<typename T>
@@ -29,19 +30,9 @@ std::string python_code_caller(const std::string& script_name, const vec2d& leve
 /* used to get data for the GCP when minimizing the interpolation error */
 combi_grid_dict get_python_data(const std::string& script_run, const int& dim);
 /* used to create the M matrix for the interpolation based problem */
-double** M_matrix(const combi_grid_dict& aux_downset, const int& dim);
-/* used to set the N matrix = M - the identity */
-double** N_matrix(const combi_grid_dict& aux_downset, const int& dim);
-/* product of two matrices */
-double** mat_prod(double** A, double** B, const int& dim);
-/* used to compute powers of the matrix N; helpful when computing its inverse */
-double** N_pow_k(double** N, const int& size_downset, const int& k);
-/* used to compute the sum of the first n-1 powers of N, where n is the dimension of N */
-double** sum_pow_N(double** N, const int& size_downset);
-/* used to create the inverse of M matrix for the interpolation based problem */
-double** M_inv(const combi_grid_dict& aux_downset, const int& dim);
-/* used to create the inverse of M in a clever way */
-double** inv_M_clever(const combi_grid_dict& aux_downset, const int& dim);
+matrix create_M_matrix(const combi_grid_dict& aux_downset, const int& dim);
+/* used to create the inverse of M */
+matrix get_inv_M(const combi_grid_dict& aux_downset, const int& dim);
 /* used to create the inverse of M matrix for the interpolation based problem */
 combi_grid_dict set_entire_downset_dict(
     const std::vector<int>& level_max, 

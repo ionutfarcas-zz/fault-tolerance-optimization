@@ -24,11 +24,11 @@ namespace lp_opt
 		glp_prob* i_lp_prob;
 
 		/* constraint matrix */
-		double* constr_mat;
+		std::vector<double> constr_mat;
 		/* row index vector for the constraint matrix */
-		int* row_index;
+		std::vector<int> row_index;
 		/* colums index vector for the constraint matrix */
-		int* col_index;
+		std::vector<int> col_index;
 
 	public:
 		/* used for LP optimization problem initialization */
