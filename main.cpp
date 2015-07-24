@@ -13,13 +13,13 @@ int main(int argv, char** argc)
 
 	/* specify levels for which the python code will be called */
 	/* the order should be from lower to higher */
-	vec2d levels = {{1, 1, 1}, {10, 10, 10}};
+	vec2d levels = {{1, 1, 1}, {20, 20, 20}};
 	assert(levels.front().size() == levels.back().size());
 	
 	int dim = levels[0].size();
 
 	/* specify the faults as x and y coordinates; program will check whether the specified constraints are in the problem dictionary */
-	vec2d faults = {{8, 2, 1}};
+	vec2d faults = {{14, 5, 2}, {3, 2, 16}, {2, 13, 6}, {5, 2, 15}, {16, 22, 3}, {14, 10, 17}, {14, 25, 2}, {7, 2, 3}, {5, 5, 1}, {3, 1, 8}, {7, 2, 1}, {4, 1, 5}, {2, 6, 3}, {1, 6, 3}, {1, 8, 2}, {3, 7, 2}, {4, 1, 7}, {3, 2, 6}, {4, 6, 1}, {4, 5, 1}, {5, 3, 2}, {1, 5, 5}, {1, 3, 7}, {4, 2, 2}, {4, 5, 2}, {8, 1, 2}, {5, 2, 4}, {3, 3, 5}, {2, 2, 7}, {2, 8, 1}};
 	assert(faults[0].size() == static_cast<unsigned int>(dim));
 
 	/* output (i.e. c vector) of the optimization problem */
