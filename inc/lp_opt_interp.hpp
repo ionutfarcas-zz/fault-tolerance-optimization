@@ -8,11 +8,6 @@ namespace lp_opt
 	class LP_OPT_INTERP : public LP_OPT
 	{
 	private:
-		/* name of the python script */
-		const std::string script_name = "../python_code/main.py";
-		/* python caller */
-		std::string get_dict;
-
 		/* levels of grid indices */
 		vec2d i_levels;
 		/* top level of grid indices*/
@@ -43,7 +38,7 @@ namespace lp_opt
 		/* inverse of M s.t. w = Mc*/
 		matrix inv_M;
 
-		/* given downset from python code */
+		/* given dictionary */
 		combi_grid_dict given_downset;
 		/* modified given downset based on ignored dimensions */
 		combi_grid_dict new_given_downset;
@@ -65,6 +60,7 @@ namespace lp_opt
 			const vec2d& _levels,  
 			const int& _dim, 
 			const int& _opt_type,
+			const combi_grid_dict& _given_downset,
 			const vec2d& _input_faults);
 
 		LP_OPT_INTERP(const LP_OPT_INTERP& obj);

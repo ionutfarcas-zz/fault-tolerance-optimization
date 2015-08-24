@@ -14,7 +14,6 @@
 #include <chrono>
 #include <valarray>
 
-
 typedef std::multimap<std::vector<int>, double> combi_grid_dict;
 typedef std::vector<std::vector<int>> vec2d;
 typedef std::vector<std::vector<double>> matrix;

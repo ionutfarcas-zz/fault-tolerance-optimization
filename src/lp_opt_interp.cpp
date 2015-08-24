@@ -4,7 +4,6 @@ namespace lp_opt
 {
 	LP_OPT_INTERP::LP_OPT_INTERP() 
 	{
-		get_dict = "";
 		i_dim = 0;
 		i_levels = {{0}};
 		level_max = {0};
@@ -17,6 +16,7 @@ namespace lp_opt
 		const vec2d& _levels,  
 		const int& _dim, 
 		const int& _opt_type,
+		const combi_grid_dict& _given_downset,
 		const vec2d& _input_faults)
 	{
 		assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
@@ -24,9 +24,6 @@ namespace lp_opt
 		i_dim = _dim;
 		opt_type = _opt_type;
 		input_faults = _input_faults;
-
-		get_dict = python_code_caller(script_name, _levels, _dim);
-		given_downset = get_python_data(get_dict, _dim);
 
 		new_levels = check_dimensionality(_levels, ignored_dimensions);
 		new_faults =  check_faults(_input_faults, ignored_dimensions);
@@ -75,9 +72,6 @@ namespace lp_opt
 		opt_type = obj.opt_type;
 		input_faults = obj.input_faults;
 
-		get_dict = obj.get_dict;
-		given_downset = obj.given_downset;
-
 		new_levels = obj.new_levels;
 		new_faults = obj.new_faults;
 		ignored_dimensions = obj.ignored_dimensions;
@@ -120,9 +114,6 @@ namespace lp_opt
 		i_dim = rhs.i_dim;
 		opt_type = rhs.opt_type;
 		input_faults = rhs.input_faults;
-
-		get_dict = rhs.get_dict;
-		given_downset = rhs.given_downset;
 
 		new_levels = rhs.new_levels;
 		new_faults = rhs.new_faults;
@@ -239,7 +230,7 @@ namespace lp_opt
 		std::vector<double> w;		
 		std::vector<double> c;
 
-		combi_grid_dict input, output;
+		combi_grid_dict output;
 
 		status = glp_mip_status(i_lp_prob);
 
@@ -295,10 +286,9 @@ namespace lp_opt
 			}
 			std::cout << std::endl;
 
-			input = get_python_data(get_dict, i_dim);
-			output = create_out_dict(input, c, i_dim);
+			output = create_out_dict(given_downset, c, i_dim);
 			std::cout<< "Dictionary before optimization: " << std::endl;
-			for(auto it = input.begin(); it != input.end(); ++it)
+			for(auto it = given_downset.begin(); it != given_downset.end(); ++it)
 			{
 				std::cout << "{(";
 					for(int j = 0 ; j < i_dim ; ++j) 
