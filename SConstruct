@@ -26,6 +26,7 @@ env.Append(CCFLAGS= ['-Wall', '-Werror', '-O2', '-std=c++11'])
 env.VariantDir(variant_dir = build, src_dir = src, duplicate = 0)
 
 src_files = Glob(build + '*.cpp')
+env.Program(target, src_files)
 
 env.SharedLibrary(target = lib + lib_name, source=src_files)
 env.StaticLibrary(target = lib + lib_name, source=src_files)

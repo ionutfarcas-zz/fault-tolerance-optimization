@@ -4,6 +4,7 @@ namespace lp_opt
 {
 	LP_OPT_INTERP::LP_OPT_INTERP() 
 	{
+		get_dict = "";
 		i_dim = 0;
 		i_levels = {{0}};
 		level_max = {0};
@@ -16,7 +17,6 @@ namespace lp_opt
 		const vec2d& _levels,  
 		const int& _dim, 
 		const int& _opt_type,
-		const combi_grid_dict& _given_downset,
 		const vec2d& _input_faults)
 	{
 		assert(_opt_type == GLP_MIN || _opt_type == GLP_MAX);
@@ -24,6 +24,9 @@ namespace lp_opt
 		i_dim = _dim;
 		opt_type = _opt_type;
 		input_faults = _input_faults;
+
+		get_dict = python_code_caller(script_name, _levels, _dim);
+		given_downset = get_python_data(get_dict, _dim);
 
 		new_levels = check_dimensionality(_levels, ignored_dimensions);
 		new_faults =  check_faults(_input_faults, ignored_dimensions);
@@ -33,7 +36,10 @@ namespace lp_opt
 		check_input_levels(new_levels);
 
 		level_max = new_levels.back();
-		size_downset = get_size_downset(level_max, new_dim);
+
+		/***************************************************************************/
+		entire_downset = set_entire_downset_dict(new_levels, new_given_downset, new_dim);
+		/***************************************************************************/ 
 
 		l_max = new_levels[1][0];
 		for(int i = 1 ; i < new_dim ; ++i)
@@ -50,12 +56,12 @@ namespace lp_opt
 			exit(0);
 		}
 
-		total_size = no_faults*size_downset;
-
-		entire_downset = set_entire_downset_dict(level_max, size_downset, new_given_downset, new_dim);
 		aux_entire_dict = create_aux_entire_dict(entire_downset, new_dim);
 		inv_M = get_inv_M(aux_entire_dict, new_dim);
 		downset_indices = get_downset_indices(entire_downset, new_dim);
+
+		size_downset = entire_downset.size();
+		total_size = no_faults*size_downset;
 
 		constr_mat.reserve(1 + total_size);
 		row_index.reserve(1 + total_size);
@@ -71,6 +77,9 @@ namespace lp_opt
 		i_dim = obj.i_dim;
 		opt_type = obj.opt_type;
 		input_faults = obj.input_faults;
+
+		get_dict = obj.get_dict;
+		given_downset = obj.given_downset;
 
 		new_levels = obj.new_levels;
 		new_faults = obj.new_faults;
@@ -114,6 +123,9 @@ namespace lp_opt
 		i_dim = rhs.i_dim;
 		opt_type = rhs.opt_type;
 		input_faults = rhs.input_faults;
+
+		get_dict = rhs.get_dict;
+		given_downset = rhs.given_downset;
 
 		new_levels = rhs.new_levels;
 		new_faults = rhs.new_faults;
@@ -228,9 +240,10 @@ namespace lp_opt
 		double w_i = 0.0;
 		double c_i = 0.0;
 		std::vector<double> w;		
-		std::vector<double> c;
+		std::vector<double> all_c;
+		std::vector<double> new_c;
 
-		combi_grid_dict output;
+		combi_grid_dict input, output;
 
 		status = glp_mip_status(i_lp_prob);
 
@@ -249,7 +262,7 @@ namespace lp_opt
 				{
 					c_i += inv_M[i][j]*w[j];
 				}
-				c.push_back(c_i);
+				all_c.push_back(c_i);
 			}
 
 			std::cout << std::endl;
@@ -286,9 +299,12 @@ namespace lp_opt
 			}
 			std::cout << std::endl;
 
-			output = create_out_dict(given_downset, c, i_dim);
+			input = get_python_data(get_dict, i_dim);
+			new_c = select_coeff_downset(all_c, new_given_downset, aux_entire_dict);
+			output = create_out_dict(input, new_c, i_dim);
+
 			std::cout<< "Dictionary before optimization: " << std::endl;
-			for(auto it = given_downset.begin(); it != given_downset.end(); ++it)
+			for(auto it = input.begin(); it != input.end(); ++it)
 			{
 				std::cout << "{(";
 					for(int j = 0 ; j < i_dim ; ++j) 
@@ -312,13 +328,15 @@ namespace lp_opt
 			}
 			std::cout << std::endl;
 
-			return c;
 			}
 			else
 			{
 				std::cout << "Error: Optimal solution not found!" << std::endl;
 				exit(0);
 			}
+			
+		return new_c;
+
 	}
 
 	LP_OPT_INTERP::~LP_OPT_INTERP()

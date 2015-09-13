@@ -14,7 +14,7 @@
 #include <chrono>
 #include <valarray>
 
-typedef std::multimap<std::vector<int>, double> combi_grid_dict;
+typedef std::map<std::vector<int>, double> combi_grid_dict;
 typedef std::vector<std::vector<int>> vec2d;
 typedef std::vector<std::vector<double>> matrix;
 
@@ -34,8 +34,7 @@ matrix create_M_matrix(const combi_grid_dict& aux_downset, const int& dim);
 matrix get_inv_M(const combi_grid_dict& aux_downset, const int& dim);
 /* used to create the inverse of M matrix for the interpolation based problem */
 combi_grid_dict set_entire_downset_dict(
-    const std::vector<int>& level_max, 
-    const int& size_downset, 
+    const vec2d levels,  
     const combi_grid_dict& received_dict,
     const int& dim);
 /* used to get a vector of the entire downset indices */
@@ -60,7 +59,7 @@ int factorial(const int& dim);
 /* test whether b >= a */
 bool test_greater(const std::vector<int>& b, const std::vector<int>& a);
 /* used to create a multi-index based on maximum level */
-vec2d mindex(const int& dimension, const int& upper_limit);
+vec2d mindex(const int& dimension, const std::vector<int>& level_max);
 /* used to check input levels dimensionality */
 vec2d check_dimensionality(const vec2d& input_levels, std::vector<int>& ignored_dimensions);
 /* used to ignore certain dimensions of the input faults based on input levels & ignored dimension */
@@ -70,5 +69,8 @@ combi_grid_dict set_new_given_dict(const combi_grid_dict& given_dict, const std:
 /* used to check whether the input levels are correct */
 /* i.e. they satisfy: l_max - l_min = c*ones(dim) */
 void check_input_levels(const vec2d& levels);
+/* used to extract only the coefficients output by the optimization problem */
+/* which correspond to levels from the given downset */
+std::vector<double> select_coeff_downset(const std::vector<double>& all_c, const combi_grid_dict& given_downset, const combi_grid_dict& aux_downset);
 
 #endif /* HELPER_HPP_ */
